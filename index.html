@@ -1441,10 +1441,35 @@ input[type=number] {
   (function() {
     "use strict";
 
-    // ===== SUPABASE =====
-    const SUPABASE_URL = 'https://imqsosdpeelbhkcufbpx.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltcXNvc2RwZWVsYmhrY3VmYnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMzc4MzQsImV4cCI6MjA5OTcxMzgzNH0.9VMGH_DJjZCcc0IwEZWqreP92uBz08fLAOI6aQsrcHE';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ===== API через Cloudflare Worker =====
+const API_URL = 'https://saku-tap-api.dildo4722.workers.dev';
+
+// Получить данные пользователя
+async function loadUserData(userId) {
+  const response = await fetch(`${API_URL}/api/user`, {
+    headers: { 'X-User-Id': userId }
+  });
+  return await response.json();
+}
+
+// Сохранить данные пользователя
+async function saveUserData(userId, data) {
+  const response = await fetch(`${API_URL}/api/user`, {
+    method: 'POST',
+    headers: {
+      'X-User-Id': userId,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+}
+
+// Получить топ игроков
+async function getLeaderboard(type = 'petals') {
+  const response = await fetch(`${API_URL}/api/leaderboard?type=${type}`);
+  return await response.json();
+}
 
 
     // ===== DOM =====
