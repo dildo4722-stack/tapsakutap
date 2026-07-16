@@ -1433,12 +1433,15 @@ input[type=number] {
   </style>
 
   <div class="toast" id="toast"></div>
-   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
-const currentUserId = tgId;
+    const currentUserId = tgId;
+  (function() {
+    "use strict";
 
-// ===== SUPABASE =====
+    // ===== SUPABASE =====
     const SUPABASE_URL = 'https://imqsosdpeelbhkcufbpx.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltcXNvc2RwZWVsYmhrY3VmYnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMzc4MzQsImV4cCI6MjA5OTcxMzgzNH0.9VMGH_DJjZCcc0IwEZWqreP92uBz08fLAOI6aQsrcHE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
