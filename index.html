@@ -876,17 +876,17 @@ input[type=number] {
     </div>
     <div class="action-label">Топ</div>
   </div>
-  <div class="action-btn" data-modal="refModal">
-    <div class="action-icon">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="9" cy="8" r="3.1" stroke="white" stroke-width="1.7"/>
-        <path d="M3.6 19c0-3.3 2.4-5.6 5.4-5.6s5.4 2.3 5.4 5.6" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
-        <circle cx="17" cy="7.5" r="2.1" stroke="white" stroke-width="1.5" opacity="0.85"/>
-        <path d="M15.2 19c0-2.6 1.6-4.5 3.7-4.9" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
-      </svg>
-    </div>
-    <div class="action-label">Друзья</div>
+  <div class="action-btn" id="friendsBtn">
+  <div class="action-icon">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="9" cy="8" r="3.1" stroke="white" stroke-width="1.7"/>
+      <path d="M3.6 19c0-3.3 2.4-5.6 5.4-5.6s5.4 2.3 5.4 5.6" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
+      <circle cx="17" cy="7.5" r="2.1" stroke="white" stroke-width="1.5" opacity="0.85"/>
+      <path d="M15.2 19c0-2.6 1.6-4.5 3.7-4.9" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
+    </svg>
   </div>
+  <div class="action-label">Друзья</div>
+</div>
   <div class="action-btn" data-modal="promoModal">
     <div class="action-icon">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1144,28 +1144,59 @@ input[type=number] {
     </div>
   </div>
 
-  <!-- Реферальная система -->
-  <div class="modal-overlay" id="refModal">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-close" data-close>✕</div>
-      <div class="modal-title">Друзья</div>
-      <div class="modal-sub">Приглашай друзей и получай награды за каждый порог приглашённых.</div>
-      <div class="card row-between">
-        <span style="font-size:13px;color:#d8b8b8;">Твоя ссылка</span>
-        <button class="btn secondary" style="width:auto;padding:8px 14px;font-size:12.5px;" id="copyRefBtn">Скопировать</button>
+<!-- Реферальная система -->
+<div class="modal-overlay" id="refModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-close" data-close>✕</div>
+    <div class="modal-title">👥 Друзья</div>
+    <div class="modal-sub">
+      Приглашай друзей и получай награды!<br>
+      <span style="font-size: 11px; color: #ffb3c6;">
+        📱 За каждого друга ты получаешь <strong>5 000 🌸</strong>
+      </span>
+    </div>
+
+    <div class="card" style="background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.3);">
+      <div style="font-size: 13px; color: #d8b8b8; margin-bottom: 8px;">🔗 Твоя ссылка</div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" id="refLinkInput" readonly value="https://t.me/SAKU_TAP_bot?start=ref_000000" style="flex:1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,190,190,0.2); border-radius: 12px; padding: 10px 14px; color: #ffb3c6; font-size: 12px; outline: none; font-family: monospace;">
+        <button class="btn secondary" style="width: auto; padding: 10px 16px; font-size: 12px; flex-shrink: 0;" id="copyRefBtn">📋 Копировать</button>
       </div>
-      <div class="card" style="font-size:12.5px;color:#ffb3c6;word-break:break-all;" id="refLinkText">https://t.me/SakuTapBot?start=ref_000000</div>
+    </div>
 
+    <!-- ===== НАГРАДЫ ПО ПОРЯДКУ ===== -->
+    <div class="card">
+      <div style="font-weight: 600; margin-bottom: 10px;">🎁 Награды за приглашения</div>
+      
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <span style="color: #d8b8b8;">5 друзей</span>
+        <span style="color: #ffd27a; font-weight: 600;">5 000 🌸</span>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <span style="color: #d8b8b8;">10 друзей</span>
+        <span style="color: #ffd27a; font-weight: 600;">10 000 🌸</span>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <span style="color: #d8b8b8;">50 друзей</span>
+        <span style="color: #ffd27a; font-weight: 600;">25 000 🌸</span>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+        <span style="color: #ffb3c6; font-weight: 600;">⭐ 100 друзей</span>
+        <span style="color: #ffb3c6; font-weight: 700;">Креатив 🏆</span>
+      </div>
+    </div>
 
-      <div class="card row-between"><span>10 друзей</span><span class="pill">5000 🌸</span></div>
-      <div class="card row-between"><span>5 друзей</span><span class="pill">10 000 🌸</span></div>
-      <div class="card row-between"><span>50 друзей</span><span class="pill">25 000 🌸</span></div>
-      <div class="card row-between"><span>100 друзей</span><span class="pill coin">Креатив</span></div>
-
-      <div style="font-size:12px;color:#cf9f9f;margin-top:8px;">Приглашено: <span id="refCount">0</span></div>
+    <div style="display: flex; justify-content: space-between; padding: 10px 0; margin-top: 4px; background: rgba(255,215,0,0.05); border-radius: 12px; padding: 12px 16px;">
+      <span style="color: #d8b8b8;">👥 Приглашено друзей</span>
+      <span style="font-size: 20px; font-weight: 700; color: #ffd27a;" id="refCount">0</span>
     </div>
   </div>
+</div>
+</div>
 
   <!-- Промокод -->
   <div class="modal-overlay" id="promoModal">
@@ -1716,7 +1747,57 @@ initTelegramUser();
       document.body.appendChild(p);
       setTimeout(() => { if (p.parentNode) p.remove(); }, 1000);
     }
+    // ===== РЕФЕРАЛЬНАЯ СИСТЕМА =====
+// Замените "YOUR_BOT_USERNAME" на юзернейм вашего бота (без @)
+const BOT_USERNAME = 'SAKU_TAP_bot';
 
+// Функция для обновления реферальной ссылки
+function updateRefLink() {
+  const userId = currentUserId || '12345';
+  const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
+  const input = document.getElementById('refLinkInput');
+  if (input) input.value = refLink;
+}
+
+// Функция для обновления статистики рефералов
+function updateRefStats() {
+  const count = refCount || 0;
+  const bonus = count * 5000;
+  
+  const countDisplay = document.getElementById('refCountDisplay');
+  const bonusDisplay = document.getElementById('refBonusDisplay');
+  
+  if (countDisplay) countDisplay.textContent = count;
+  if (bonusDisplay) bonusDisplay.textContent = bonus.toLocaleString();
+}
+
+// Обновляем при открытии модалки "Друзья"
+document.getElementById('friendsBtn')?.addEventListener('click', function() {
+  updateRefLink();
+  updateRefStats();
+  document.getElementById('refModal').classList.add('open');
+});
+
+// Копирование ссылки
+document.getElementById('copyRefBtn')?.addEventListener('click', function() {
+  const input = document.getElementById('refLinkInput');
+  if (input && input.value) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(input.value).then(() => {
+        showToast('✅ Ссылка скопирована!');
+      }).catch(() => {
+        // fallback
+        input.select();
+        document.execCommand('copy');
+        showToast('✅ Ссылка скопирована!');
+      });
+    } else {
+      input.select();
+      document.execCommand('copy');
+      showToast('✅ Ссылка скопирована!');
+    }
+  }
+}); 
     // ===== Ежедневное задание: автоначисление награды =====
     function checkTapTask() {
       if (!tapTaskClaimed && tapTaskCount >= TAP_TASK_GOAL) {
