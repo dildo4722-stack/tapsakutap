@@ -1437,110 +1437,117 @@ input[type=number] {
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
-    const currentUserId = tgId;
-  (function() {
-    "use strict";
+const currentUserId = tgId;
 
-    // ===== API через Cloudflare Worker =====
+// ===== API через Cloudflare Worker =====
 const API_URL = 'https://saku-tap-api.dildo4722.workers.dev';
 
-// Получить данные пользователя
 async function loadUserData(userId) {
-  const response = await fetch(`${API_URL}/api/user`, {
-    headers: { 'X-User-Id': userId }
-  });
-  return await response.json();
+  try {
+    const response = await fetch(`${API_URL}/api/user`, {
+      headers: { 'X-User-Id': String(userId) }
+    });
+    if (!response.ok) throw new Error('Ошибка загрузки');
+    return await response.json();
+  } catch (error) {
+    console.error('loadUserData error:', error);
+    return null;
+  }
 }
 
-// Сохранить данные пользователя
 async function saveUserData(userId, data) {
-  const response = await fetch(`${API_URL}/api/user`, {
-    method: 'POST',
-    headers: {
-      'X-User-Id': userId,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  });
-  return await response.json();
+  try {
+    const response = await fetch(`${API_URL}/api/user`, {
+      method: 'POST',
+      headers: {
+        'X-User-Id': String(userId),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Ошибка сохранения');
+    return await response.json();
+  } catch (error) {
+    console.error('saveUserData error:', error);
+    return null;
+  }
 }
 
-// Получить топ игроков
 async function getLeaderboard(type = 'petals') {
-  const response = await fetch(`${API_URL}/api/leaderboard?type=${type}`);
-  return await response.json();
+  try {
+    const response = await fetch(`${API_URL}/api/leaderboard?type=${type}`);
+    if (!response.ok) throw new Error('Ошибка загрузки лидерборда');
+    return await response.json();
+  } catch (error) {
+    console.error('getLeaderboard error:', error);
+    return [];
+  }
 }
 
+// ===== DOM =====
+const tapBtn = document.getElementById('tapButton');
+const petalDisplay = document.getElementById('petalDisplay');
+const coinDisplay = document.getElementById('coinDisplay');
+const energyFill = document.getElementById('energyFill');
+const energyText = document.getElementById('energyText');
+const toastEl = document.getElementById('toast');
+const usernameEl = document.getElementById('username');
+const avatarEl = document.getElementById('avatar');
+const loginStreakEl = document.getElementById('loginStreak');
+const refCountEl = document.getElementById('refCount');
 
-    // ===== DOM =====
-    const tapBtn = document.getElementById('tapButton');
-    const petalDisplay = document.getElementById('petalDisplay');
-    const coinDisplay = document.getElementById('coinDisplay');
-    const energyFill = document.getElementById('energyFill');
-    const energyText = document.getElementById('energyText');
-    const toastEl = document.getElementById('toast');
-    const usernameEl = document.getElementById('username');
-    const avatarEl = document.getElementById('avatar');
-    const loginStreakEl = document.getElementById('loginStreak');
-    const refCountEl = document.getElementById('refCount');
+usernameEl.textContent = 'Сакура';
+avatarEl.textContent = 'С';
 
-    usernameEl.textContent = 'Сакура';
-    avatarEl.textContent = 'С';
+// ===== СОСТОЯНИЕ =====
+let petals = 0;
+let coins = 0;
+let energy = 1000;
+const MAX_ENERGY = 1000;
+let tapMultiplier = 1; 
+let tapMultiplierExpiresAt = 0;
 
-    // ===== СОСТОЯНИЕ =====
-    let petals = 0;
-    let coins = 0;
-    let energy = 1000;
-    const MAX_ENERGY = 1000;
-    let tapMultiplier = 1; 
-    let tapMultiplierExpiresAt = 0;
+let totalTaps = 0;
+let tapTaskCount = 0;
+const TAP_TASK_GOAL = 5000;
+const TAP_TASK_REWARD = 1000;
+let tapTaskClaimed = false;
 
-    let totalTaps = 0;
-    let tapTaskCount = 0;
-    const TAP_TASK_GOAL = 5000;
-    const TAP_TASK_REWARD = 1000;
-    let tapTaskClaimed = false;
+let totalExchangesCount = 0;
+let loginStreak = 1;
+let refCount = 0;
 
-    let totalExchangesCount = 0;
-    let loginStreak = 1;
-    let refCount = 0;
+let wheelFreeAvailableAt = 0;
+const WHEEL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+let wheelSpinning = false;
 
-    let wheelFreeAvailableAt = 0;
-    const WHEEL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
-    let wheelSpinning = false;
+let chestsOpened = 0;
+let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || {};
+let isDirty = false;
 
-    let chestsOpened = 0;
-    let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || {};
-    let isDirty = false;
+function formatNumber(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+  return n.toString();
+}
 
-    function formatNumber(n) {
-      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
-      return n.toString();
-    }
-
-    
-    
-    function updateMultiplierDisplay() {
+function updateMultiplierDisplay() {
   const el = document.getElementById('multiplierDisplay');
   if (!el) return;
-  
   const now = Date.now();
   const remaining = tapMultiplierExpiresAt - now;
-  
   if (tapMultiplier <= 1 || remaining <= 0) {
     el.textContent = 'x1';
     return;
   }
-  
   const hours = Math.floor(remaining / (60 * 60 * 1000));
   const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
   el.textContent = `x${tapMultiplier} (${hours}ч ${minutes}мин)`;
 }
 
-// Обновляем каждую минуту
 setInterval(updateMultiplierDisplay, 60000);
-    function checkMultiplierExpiry() {
+
+function checkMultiplierExpiry() {
   const now = Date.now();
   if (tapMultiplier > 1 && now >= tapMultiplierExpiresAt) {
     tapMultiplier = 1;
@@ -1552,63 +1559,55 @@ setInterval(updateMultiplierDisplay, 60000);
   }
 }
 
-// Запускаем проверку каждую минуту
 setInterval(checkMultiplierExpiry, 60000);
 
-    function showToast(msg, ms) {
-      if (!toastEl) return;
-      toastEl.textContent = msg;
-      toastEl.classList.add('show');
-      clearTimeout(showToast._t);
-      showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
-    }
+function showToast(msg, ms) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
+}
 
-    function updateUI() {
-      if (petalDisplay) petalDisplay.textContent = formatNumber(petals);
-      if (coinDisplay) coinDisplay.textContent = formatNumber(coins);
+function updateUI() {
+  if (petalDisplay) petalDisplay.textContent = formatNumber(petals);
+  if (coinDisplay) coinDisplay.textContent = formatNumber(coins);
 
-      if (energyFill) energyFill.style.width = Math.min(100, (energy / MAX_ENERGY) * 100) + '%';
-      if (energyText) energyText.textContent = Math.floor(energy);
+  if (energyFill) energyFill.style.width = Math.min(100, (energy / MAX_ENERGY) * 100) + '%';
+  if (energyText) energyText.textContent = Math.floor(energy);
 
-      const tf = document.getElementById('tapTaskFill');
-      const tp = document.getElementById('tapTaskProgress');
-      if (tf) tf.style.width = Math.min(100, (tapTaskCount / TAP_TASK_GOAL) * 100) + '%';
-      if (tp) tp.textContent = Math.min(tapTaskCount, TAP_TASK_GOAL);
+  const tf = document.getElementById('tapTaskFill');
+  const tp = document.getElementById('tapTaskProgress');
+  if (tf) tf.style.width = Math.min(100, (tapTaskCount / TAP_TASK_GOAL) * 100) + '%';
+  if (tp) tp.textContent = Math.min(tapTaskCount, TAP_TASK_GOAL);
 
-      const ea = document.getElementById('exAvailPetals');
-      if (ea) ea.textContent = formatNumber(petals);
+  const ea = document.getElementById('exAvailPetals');
+  if (ea) ea.textContent = formatNumber(petals);
 
-      if (refCountEl) refCountEl.textContent = refCount;
-      if (loginStreakEl) loginStreakEl.textContent = loginStreak;
-    }
+  if (refCountEl) refCountEl.textContent = refCount;
+  if (loginStreakEl) loginStreakEl.textContent = loginStreak;
+}
 
-    // ===== ПОЛУЧЕНИЕ ДАННЫХ ИЗ TELEGRAM =====
+// ===== ПОЛУЧЕНИЕ ДАННЫХ ИЗ TELEGRAM =====
 function initTelegramUser() {
   try {
-    // Проверяем, запущено ли приложение в Telegram
     if (window.Telegram && window.Telegram.WebApp) {
       const user = window.Telegram.WebApp.initDataUnsafe?.user;
-      
       if (user) {
-        // Устанавливаем имя пользователя
         const username = user.username || user.first_name || 'Сакура';
         document.getElementById('username').textContent = username;
-        
-        // Если есть фото профиля (только если у бота есть доступ)
         if (user.photo_url) {
           const avatarImg = document.getElementById('userAvatar');
           avatarImg.src = user.photo_url;
           avatarImg.style.display = 'block';
           document.getElementById('avatarLetter').style.display = 'none';
         } else {
-          // Если фото нет, показываем первую букву имени
           document.getElementById('avatarLetter').textContent = (user.first_name || 'S')[0].toUpperCase();
           document.getElementById('avatarLetter').style.display = 'flex';
         }
-        
-        // Сохраняем ID пользователя (если нужно)
-        currentUserId = user.id.toString();
-        localStorage.setItem('saku_user_id', currentUserId);
+        // Обновляем ID если нужно
+        const userId = user.id.toString();
+        localStorage.setItem('saku_user_id', userId);
       }
     }
   } catch (e) {
@@ -1616,418 +1615,357 @@ function initTelegramUser() {
   }
 }
 
-// Вызываем при загрузке
 initTelegramUser();
 
-    // ===== БАЗА ДАННЫХ =====
-    async function loadData() {
-      try {
-        const { data: user, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('telegram_id', currentUserId)
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error("Ошибка загрузки данных:", error);
-          return;
-        }
-
-        if (user) {
-          petals = user.petals ?? 0;
-          coins = user.coins ?? 0;
-          energy = user.energy ?? 1000;
-          totalTaps = user.total_taps ?? 0;
-          tapTaskCount = user.tap_count ?? 0;
-          tapTaskClaimed = !!user.tap_task_claimed;
-          loginStreak = user.login_streak ?? 1;
-          refCount = user.ref_count ?? 0;
-          totalExchangesCount = user.total_exchanges ?? 0;
-          tapMultiplier = user.tap_multiplier ?? 1;
-          tapMultiplierExpiresAt = user.tap_multiplier_expires_at ?? 0;
-          wheelFreeAvailableAt = user.wheel_free_available_at ?? 0;
-        }
-        updateUI();
-        updateAchievements();
-      } catch (e) {
-        console.error("Критическая ошибка загрузки:", e);
-      }
+// ===== ЗАГРУЗКА И СОХРАНЕНИЕ ДАННЫХ (через Worker) =====
+async function loadData() {
+  try {
+    const userData = await loadUserData(currentUserId);
+    if (userData) {
+      petals = userData.petals ?? 0;
+      coins = userData.coins ?? 0;
+      energy = userData.energy ?? 1000;
+      totalTaps = userData.total_taps ?? 0;
+      tapTaskCount = userData.tap_count ?? 0;
+      tapTaskClaimed = !!userData.tap_task_claimed;
+      loginStreak = userData.login_streak ?? 1;
+      refCount = userData.ref_count ?? 0;
+      totalExchangesCount = userData.total_exchanges ?? 0;
+      tapMultiplier = userData.tap_multiplier ?? 1;
+      tapMultiplierExpiresAt = userData.tap_multiplier_expires_at ?? 0;
+      wheelFreeAvailableAt = userData.wheel_free_available_at ?? 0;
     }
+    updateUI();
+    updateAchievements();
+  } catch (e) {
+    console.error("Критическая ошибка загрузки:", e);
+  }
+}
 
-    async function saveData() {
+async function saveData() {
   if (!isDirty) return;
   try {
-    // Проверяем, существует ли пользователь
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('telegram_id')
-      .eq('telegram_id', currentUserId)
-      .maybeSingle();
-
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error("Ошибка проверки пользователя:", checkError);
-      return;
-    }
-
-    let error;
-    if (existingUser) {
-      // Обновляем существующего пользователя
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          petals: petals,
-          coins: coins,
-          energy: energy,
-          total_taps: totalTaps,
-          tap_count: tapTaskCount,
-          tap_task_claimed: tapTaskClaimed,
-          login_streak: loginStreak,
-          ref_count: refCount,
-          total_exchanges: totalExchangesCount,
-          tap_multiplier: tapMultiplier,
-          tap_multiplier_expires_at: tapMultiplierExpiresAt,
-          wheel_free_available_at: wheelFreeAvailableAt,
-          last_login: new Date()
-        })
-        .eq('telegram_id', currentUserId);
-      error = updateError;
-    } else {
-      // Создаём нового пользователя
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          telegram_id: currentUserId,
-          petals: petals,
-          coins: coins,
-          energy: energy,
-          total_taps: totalTaps,
-          tap_count: tapTaskCount,
-          tap_task_claimed: tapTaskClaimed,
-          login_streak: loginStreak,
-          ref_count: refCount,
-          total_exchanges: totalExchangesCount,
-          tap_multiplier: tapMultiplier,
-          tap_multiplier_expires_at: tapMultiplierExpiresAt,
-          wheel_free_available_at: wheelFreeAvailableAt,
-          last_login: new Date()
-        });
-      error = insertError;
-    }
-
-    if (!error) {
+    const payload = {
+      petals: petals,
+      coins: coins,
+      energy: energy,
+      total_taps: totalTaps,
+      tap_count: tapTaskCount,
+      tap_task_claimed: tapTaskClaimed,
+      login_streak: loginStreak,
+      ref_count: refCount,
+      total_exchanges: totalExchangesCount,
+      tap_multiplier: tapMultiplier,
+      tap_multiplier_expires_at: tapMultiplierExpiresAt,
+      wheel_free_available_at: wheelFreeAvailableAt,
+      last_login: new Date().toISOString()
+    };
+    const result = await saveUserData(currentUserId, payload);
+    if (result) {
       isDirty = false;
-    } else {
-      console.error("Ошибка сохранения:", error);
     }
   } catch (e) {
     console.error("Критическая ошибка сохранения:", e);
   }
 }
 
-    function spawnSakura() {
-      if (!tapBtn) return;
-      const r = tapBtn.getBoundingClientRect();
-      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const p = document.createElement('div');
-      p.className = 'petal-fly';
-      p.textContent = '🌸';
-      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.2, d = 120 + Math.random() * 100;
-      p.style.setProperty('--tx', Math.cos(a) * d + 'px');
-      p.style.setProperty('--ty', Math.sin(a) * d - 30 + 'px');
-      const size = 34 + Math.random() * 20;
-      p.style.fontSize = size + 'px';
-      p.style.left = (cx - size / 2) + 'px';
-      p.style.top = (cy - size / 2) + 'px';
-      document.body.appendChild(p);
-      setTimeout(() => { if (p.parentNode) p.remove(); }, 1000);
-    }
+function spawnSakura() {
+  if (!tapBtn) return;
+  const r = tapBtn.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const p = document.createElement('div');
+  p.className = 'petal-fly';
+  p.textContent = '🌸';
+  const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.2, d = 120 + Math.random() * 100;
+  p.style.setProperty('--tx', Math.cos(a) * d + 'px');
+  p.style.setProperty('--ty', Math.sin(a) * d - 30 + 'px');
+  const size = 34 + Math.random() * 20;
+  p.style.fontSize = size + 'px';
+  p.style.left = (cx - size / 2) + 'px';
+  p.style.top = (cy - size / 2) + 'px';
+  document.body.appendChild(p);
+  setTimeout(() => { if (p.parentNode) p.remove(); }, 1000);
+}
 
-    // ===== Ежедневное задание: автоначисление награды =====
-    function checkTapTask() {
-      if (!tapTaskClaimed && tapTaskCount >= TAP_TASK_GOAL) {
-        tapTaskClaimed = true;
-        petals += TAP_TASK_REWARD; // награда сразу плюсуется на баланс
-        isDirty = true;
-        updateUI();
-        saveData();
-        showToast(`🎉 Задание выполнено: 5 000 тапов! +${TAP_TASK_REWARD} 🌸 начислено`);
-      }
-    }
+function checkTapTask() {
+  if (!tapTaskClaimed && tapTaskCount >= TAP_TASK_GOAL) {
+    tapTaskClaimed = true;
+    petals += TAP_TASK_REWARD;
+    isDirty = true;
+    updateUI();
+    saveData();
+    showToast(`🎉 Задание выполнено: 5 000 тапов! +${TAP_TASK_REWARD} 🌸 начислено`);
+  }
+}
 
-    function handleTap(e) {
-      if (e) e.preventDefault();
-      if (energy < 1) {
-        if (tapBtn) {
-          tapBtn.style.transform = 'scale(0.85)';
-          setTimeout(() => tapBtn.style.transform = '', 100);
-        }
-        return;
-      }
-      energy -= 1;
-      petals += tapMultiplier; // сколько сакур даёт тап, зависит от текущего множителя (колесо)
-      totalTaps += 1;
-      tapTaskCount += 1;
-      isDirty = true;
-
-      spawnSakura();
-      updateUI();
-      checkTapTask();
-      updateAchievements();
-      if (navigator.vibrate) navigator.vibrate(8);
-    }
-
+function handleTap(e) {
+  if (e) e.preventDefault();
+  if (energy < 1) {
     if (tapBtn) {
-      tapBtn.addEventListener('click', handleTap);
-      tapBtn.addEventListener('touchstart', function(e) { e.preventDefault(); handleTap(e); }, { passive: false });
+      tapBtn.style.transform = 'scale(0.85)';
+      setTimeout(() => tapBtn.style.transform = '', 100);
     }
-
-    setInterval(() => {
-      if (energy < MAX_ENERGY) {
-        energy = Math.min(energy + 1, MAX_ENERGY);
-        isDirty = true;
-        updateUI();
-      }
-    }, 3000);
-
-    // ===== МОДАЛКИ =====
-    document.querySelectorAll('[data-modal]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-modal');
-        const modal = document.getElementById(id);
-        if (modal) modal.classList.add('open');
-        if (id === 'topModal') {
-          const activeTab = document.querySelector('[data-lb].active');
-          renderLeaderboard(activeTab ? activeTab.getAttribute('data-lb') : 'petals');
-        }
-      });
-    });
-    document.getElementById('balanceWrap').addEventListener('click', () => {
-      document.getElementById('exchangeModal').classList.add('open');
-    });
-    document.querySelectorAll('.modal-overlay').forEach(ov => {
-      ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('open'); });
-      ov.querySelectorAll('[data-close]').forEach(c => c.addEventListener('click', () => ov.classList.remove('open')));
-    });
-
-    // ===== Обмен лепестков на монеты =====
-    const exchangeInput = document.getElementById('exchangeInput');
-    const exchangePreview = document.getElementById('exchangePreview');
-    const EXCHANGE_RATE = 10000;
-
-    const coinSVG = `
-      <span class="coin-icon-wrapper" style="display: inline-flex; align-items: center; width: 16px; height: 16px; filter: drop-shadow(0 1px 3px rgba(255, 193, 7, 0.4)); animation: coinFloat 3s ease-in-out infinite;">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
-          <circle cx="12" cy="12" r="10" fill="url(#goldGrad)" stroke="#FFA000" stroke-width="1"/>
-          <circle cx="12" cy="12" r="7" fill="none" stroke="#FF8F00" stroke-width="1" stroke-dasharray="2 1"/>
-          <path d="M12 7v10M10 9.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v0c0 .83-.67 1.5-1.5 1.5h-1c-.83 0-1.5.67-1.5 1.5v0c0 .83.67 1.5 1.5 1.5h1c.83 0 1.5-.67 1.5-1.5" stroke="#FF8F00" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </span>
-    `;
-
-    function updateExchangePreview(coinsCount) {
-      const spentPetals = coinsCount * EXCHANGE_RATE;
-      exchangePreview.innerHTML = `
-        ${coinsCount} ${coinSVG} <span style="color: #cf9f9f; font-weight: normal; margin-left: 4px;">(спишется ${spentPetals.toLocaleString()} 🌸)</span>
-      `;
-    }
-
-    exchangeInput.addEventListener('input', () => {
-      const val = Math.max(0, Math.floor(Number(exchangeInput.value) || 0));
-      const wholeCoins = Math.floor(val / EXCHANGE_RATE);
-      updateExchangePreview(wholeCoins);
-    });
-
-    document.getElementById('exchangeBtn').addEventListener('click', () => {
-      const val = Math.max(0, Math.floor(Number(exchangeInput.value) || 0));
-      const wholeCoins = Math.floor(val / EXCHANGE_RATE);
-      const petalsToSpend = wholeCoins * EXCHANGE_RATE;
-
-      if (wholeCoins <= 0) { showToast('Укажи хотя бы 10 000 лепестков'); return; }
-      if (petalsToSpend > petals) { showToast('Недостаточно лепестков'); return; }
-
-      petals -= petalsToSpend;
-      coins += wholeCoins;
-      totalExchangesCount += 1;
-      isDirty = true;
-
-      updateUI();
-      updateAchievements();
-      saveData();
-
-      exchangeInput.value = '';
-      updateExchangePreview(0);
-
-      showToast(`Обменено: -${formatNumber(petalsToSpend)} 🌸 ➔ +${wholeCoins} 🪙`);
-    });
-
-    // ===== Промокод =====
-    document.getElementById('promoBtn').addEventListener('click', () => {
-      const code = document.getElementById('promoInput').value.trim();
-      if (!code) { showToast('Введи промокод'); return; }
-      showToast('Код отправлен на проверку');
-      document.getElementById('promoInput').value = '';
-    });
-
-    // ===== Рефералка =====
-    document.getElementById('copyRefBtn').addEventListener('click', () => {
-      const text = document.getElementById('refLinkText').textContent;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => showToast('Ссылка скопирована'));
-      } else {
-        showToast('Скопируй ссылку вручную');
-      }
-    });
-
-    // ===== Колесо удачи: 4 сектора x1 / x2 / x3 / x4 =====
-    // Каждый приз задаёт множитель лепестков за тап (1 тап = N сакур).
-    const wheelEl = document.getElementById('wheelEl');
-    const wheelStatus = document.getElementById('wheelStatus');
-    const wheelFreeBtn = document.getElementById('wheelFreeBtn');
-    const wheelPaidBtn = document.getElementById('wheelPaidBtn');
-
-    const wheelPrizes = [
-      { label: 'x1', mult: 1, weight: 40 },
-      { label: 'x2', mult: 2, weight: 30 },
-      { label: 'x3', mult: 3, weight: 20 },
-      { label: 'x4', mult: 4, weight: 10 },
-    ];
-    const wheelTotalWeight = wheelPrizes.reduce((s, p) => s + p.weight, 0);
-
-    function pickWeightedIndex(list, totalWeight) {
-      let r = Math.random() * totalWeight;
-      for (let i = 0; i < list.length; i++) {
-        if (r < list[i].weight) return i;
-        r -= list[i].weight;
-      }
-      return list.length - 1;
-    }
-
-    function refreshWheelStatus() {
-      const now = Date.now();
-      if (now >= wheelFreeAvailableAt) {
-        wheelStatus.textContent = 'Бесплатное вращение доступно';
-        wheelFreeBtn.disabled = false;
-      } else {
-        const mins = Math.ceil((wheelFreeAvailableAt - now) / 60000);
-        wheelStatus.textContent = `Следующее бесплатное вращение через ~${mins} мин`;
-        wheelFreeBtn.disabled = true;
-      }
-    }
-    setInterval(refreshWheelStatus, 5000);
-    refreshWheelStatus();
-
-    function spinWheel(isFree) {
-      if (wheelSpinning) return;
-      if (isFree && Date.now() < wheelFreeAvailableAt) { showToast('Бесплатное вращение ещё не готово'); return; }
-      if (!isFree && coins < 1) { showToast('Недостаточно монет'); return; }
-
-      wheelSpinning = true;
-      wheelFreeBtn.disabled = true;
-      wheelPaidBtn.disabled = true;
-
-      if (!isFree) { coins -= 1; isDirty = true; }
-
-      const idx = pickWeightedIndex(wheelPrizes, wheelTotalWeight);
-      const prize = wheelPrizes[idx];
-
-      // сегмент i занимает [i*90, i*90+90) градусов от верха по часовой стрелке
-      const segmentCenter = idx * 90 + 45;
-      const spins = 4 + Math.floor(Math.random() * 3);
-      const finalAngle = spins * 360 + (360 - segmentCenter);
-      wheelEl.style.transform = `rotate(${finalAngle}deg)`;
-
-     setTimeout(() => {
-  tapMultiplier = prize.mult;
-  tapMultiplierExpiresAt = Date.now() + 6 * 60 * 60 * 1000; // ровно 6 часов
+    return;
+  }
+  energy -= 1;
+  petals += tapMultiplier;
+  totalTaps += 1;
+  tapTaskCount += 1;
   isDirty = true;
+
+  spawnSakura();
   updateUI();
+  checkTapTask();
+  updateAchievements();
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+
+if (tapBtn) {
+  tapBtn.addEventListener('click', handleTap);
+  tapBtn.addEventListener('touchstart', function(e) { e.preventDefault(); handleTap(e); }, { passive: false });
+}
+
+setInterval(() => {
+  if (energy < MAX_ENERGY) {
+    energy = Math.min(energy + 1, MAX_ENERGY);
+    isDirty = true;
+    updateUI();
+  }
+}, 3000);
+
+// ===== МОДАЛКИ =====
+document.querySelectorAll('[data-modal]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.getAttribute('data-modal');
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.add('open');
+    if (id === 'topModal') {
+      const activeTab = document.querySelector('[data-lb].active');
+      renderLeaderboard(activeTab ? activeTab.getAttribute('data-lb') : 'petals');
+    }
+  });
+});
+
+document.getElementById('balanceWrap').addEventListener('click', () => {
+  document.getElementById('exchangeModal').classList.add('open');
+});
+
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('open'); });
+  ov.querySelectorAll('[data-close]').forEach(c => c.addEventListener('click', () => ov.classList.remove('open')));
+});
+
+// ===== Обмен лепестков на монеты =====
+const exchangeInput = document.getElementById('exchangeInput');
+const exchangePreview = document.getElementById('exchangePreview');
+const EXCHANGE_RATE = 10000;
+
+const coinSVG = `
+  <span class="coin-icon-wrapper" style="display: inline-flex; align-items: center; width: 16px; height: 16px; filter: drop-shadow(0 1px 3px rgba(255, 193, 7, 0.4)); animation: coinFloat 3s ease-in-out infinite;">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+      <circle cx="12" cy="12" r="10" fill="url(#goldGrad)" stroke="#FFA000" stroke-width="1"/>
+      <circle cx="12" cy="12" r="7" fill="none" stroke="#FF8F00" stroke-width="1" stroke-dasharray="2 1"/>
+      <path d="M12 7v10M10 9.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v0c0 .83-.67 1.5-1.5 1.5h-1c-.83 0-1.5.67-1.5 1.5v0c0 .83.67 1.5 1.5 1.5h1c.83 0 1.5-.67 1.5-1.5" stroke="#FF8F00" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </span>
+`;
+
+function updateExchangePreview(coinsCount) {
+  const spentPetals = coinsCount * EXCHANGE_RATE;
+  exchangePreview.innerHTML = `
+    ${coinsCount} ${coinSVG} <span style="color: #cf9f9f; font-weight: normal; margin-left: 4px;">(спишется ${spentPetals.toLocaleString()} 🌸)</span>
+  `;
+}
+
+exchangeInput.addEventListener('input', () => {
+  const val = Math.max(0, Math.floor(Number(exchangeInput.value) || 0));
+  const wholeCoins = Math.floor(val / EXCHANGE_RATE);
+  updateExchangePreview(wholeCoins);
+});
+
+document.getElementById('exchangeBtn').addEventListener('click', () => {
+  const val = Math.max(0, Math.floor(Number(exchangeInput.value) || 0));
+  const wholeCoins = Math.floor(val / EXCHANGE_RATE);
+  const petalsToSpend = wholeCoins * EXCHANGE_RATE;
+
+  if (wholeCoins <= 0) { showToast('Укажи хотя бы 10 000 лепестков'); return; }
+  if (petalsToSpend > petals) { showToast('Недостаточно лепестков'); return; }
+
+  petals -= petalsToSpend;
+  coins += wholeCoins;
+  totalExchangesCount += 1;
+  isDirty = true;
+
+  updateUI();
+  updateAchievements();
   saveData();
-  showToast(`🎉 Выпало: ${prize.label} — теперь 1 тап = ${prize.mult} 🌸 (на 6 часов)`);
-  wheelSpinning = false;
-  wheelPaidBtn.disabled = false;
-  if (isFree) wheelFreeAvailableAt = Date.now() + WHEEL_COOLDOWN_MS;
-  refreshWheelStatus();
-}, 3300);
-    }
 
-    wheelFreeBtn.addEventListener('click', () => spinWheel(true));
-    wheelPaidBtn.addEventListener('click', () => spinWheel(false));
+  exchangeInput.value = '';
+  updateExchangePreview(0);
 
-    // ===== Сундуки =====
-    const chestPools = {
-      common: {
-        cost: 2000, currency: 'petals',
-        pool: [
-          { label: '100 🌸', weight: 35, apply: () => { petals += 100; } },
-          { label: '500 🌸', weight: 30, apply: () => { petals += 500; } },
-          { label: '1 000 🌸', weight: 20, apply: () => { petals += 1000; } },
-          { label: '2 000 🌸', weight: 10, apply: () => { petals += 2000; } },
-          { label: '5 000 🌸', weight: 5,  apply: () => { petals += 5000; } },
-        ]
-      },
-      rare: {
-        cost: 5, currency: 'coins',
-        pool: [
-          { label: '1 000 🌸', weight: 30, apply: () => { petals += 1000; } },
-          { label: '2 000 🌸', weight: 25, apply: () => { petals += 2000; } },
-          { label: '5 000 🌸', weight: 20, apply: () => { petals += 5000; } },
-          { label: '10 000 🌸', weight: 15, apply: () => { petals += 10000; } },
-          { label: '1 🪙', weight: 8, apply: () => { coins += 1; } },
-          { label: '3 🪙', weight: 2, apply: () => { coins += 3; } },
-        ]
-      }
-    };
+  showToast(`Обменено: -${formatNumber(petalsToSpend)} 🌸 ➔ +${wholeCoins} 🪙`);
+});
 
-    function pickWeighted(list, totalWeight) {
-      let r = Math.random() * totalWeight;
-      for (const item of list) {
-        if (r < item.weight) return item;
-        r -= item.weight;
-      }
-      return list[list.length - 1];
-    }
+// ===== Промокод =====
+document.getElementById('promoBtn').addEventListener('click', () => {
+  const code = document.getElementById('promoInput').value.trim();
+  if (!code) { showToast('Введи промокод'); return; }
+  showToast('Код отправлен на проверку');
+  document.getElementById('promoInput').value = '';
+});
 
-    document.querySelectorAll('.chest-card').forEach(card => {
-      const key = card.getAttribute('data-chest');
-      card.querySelector('button').addEventListener('click', () => {
-        const cfg = chestPools[key];
-        const balance = cfg.currency === 'coins' ? coins : petals;
-        if (balance < cfg.cost) { showToast('Недостаточно средств для этого сундука'); return; }
-        if (cfg.currency === 'coins') coins -= cfg.cost; else petals -= cfg.cost;
+// ===== Рефералка =====
+document.getElementById('copyRefBtn').addEventListener('click', () => {
+  const text = document.getElementById('refLinkText').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('Ссылка скопирована'));
+  } else {
+    showToast('Скопируй ссылку вручную');
+  }
+});
 
-        const totalWeight = cfg.pool.reduce((s, p) => s + p.weight, 0);
-        const prize = pickWeighted(cfg.pool, totalWeight);
-        prize.apply();
-        chestsOpened += 1;
-        isDirty = true;
-        updateUI();
-        saveData();
-        document.getElementById('chestResult').textContent = `Выпало: ${prize.label}`;
-      });
-    });
+// ===== Колесо удачи =====
+const wheelEl = document.getElementById('wheelEl');
+const wheelStatus = document.getElementById('wheelStatus');
+const wheelFreeBtn = document.getElementById('wheelFreeBtn');
+const wheelPaidBtn = document.getElementById('wheelPaidBtn');
 
-    // ===== Топ игроков (реальные данные из БД) =====
+const wheelPrizes = [
+  { label: 'x1', mult: 1, weight: 40 },
+  { label: 'x2', mult: 2, weight: 30 },
+  { label: 'x3', mult: 3, weight: 20 },
+  { label: 'x4', mult: 4, weight: 10 },
+];
+const wheelTotalWeight = wheelPrizes.reduce((s, p) => s + p.weight, 0);
+
+function pickWeightedIndex(list, totalWeight) {
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < list.length; i++) {
+    if (r < list[i].weight) return i;
+    r -= list[i].weight;
+  }
+  return list.length - 1;
+}
+
+function refreshWheelStatus() {
+  const now = Date.now();
+  if (now >= wheelFreeAvailableAt) {
+    wheelStatus.textContent = 'Бесплатное вращение доступно';
+    wheelFreeBtn.disabled = false;
+  } else {
+    const mins = Math.ceil((wheelFreeAvailableAt - now) / 60000);
+    wheelStatus.textContent = `Следующее бесплатное вращение через ~${mins} мин`;
+    wheelFreeBtn.disabled = true;
+  }
+}
+setInterval(refreshWheelStatus, 5000);
+refreshWheelStatus();
+
+function spinWheel(isFree) {
+  if (wheelSpinning) return;
+  if (isFree && Date.now() < wheelFreeAvailableAt) { showToast('Бесплатное вращение ещё не готово'); return; }
+  if (!isFree && coins < 1) { showToast('Недостаточно монет'); return; }
+
+  wheelSpinning = true;
+  wheelFreeBtn.disabled = true;
+  wheelPaidBtn.disabled = true;
+
+  if (!isFree) { coins -= 1; isDirty = true; }
+
+  const idx = pickWeightedIndex(wheelPrizes, wheelTotalWeight);
+  const prize = wheelPrizes[idx];
+
+  const segmentCenter = idx * 90 + 45;
+  const spins = 4 + Math.floor(Math.random() * 3);
+  const finalAngle = spins * 360 + (360 - segmentCenter);
+  wheelEl.style.transform = `rotate(${finalAngle}deg)`;
+
+  setTimeout(() => {
+    tapMultiplier = prize.mult;
+    tapMultiplierExpiresAt = Date.now() + 6 * 60 * 60 * 1000;
+    isDirty = true;
+    updateUI();
+    saveData();
+    showToast(`🎉 Выпало: ${prize.label} — теперь 1 тап = ${prize.mult} 🌸 (на 6 часов)`);
+    wheelSpinning = false;
+    wheelPaidBtn.disabled = false;
+    if (isFree) wheelFreeAvailableAt = Date.now() + WHEEL_COOLDOWN_MS;
+    refreshWheelStatus();
+  }, 3300);
+}
+
+wheelFreeBtn.addEventListener('click', () => spinWheel(true));
+wheelPaidBtn.addEventListener('click', () => spinWheel(false));
+
+// ===== Сундуки =====
+const chestPools = {
+  common: {
+    cost: 2000, currency: 'petals',
+    pool: [
+      { label: '100 🌸', weight: 35, apply: () => { petals += 100; } },
+      { label: '500 🌸', weight: 30, apply: () => { petals += 500; } },
+      { label: '1 000 🌸', weight: 20, apply: () => { petals += 1000; } },
+      { label: '2 000 🌸', weight: 10, apply: () => { petals += 2000; } },
+      { label: '5 000 🌸', weight: 5,  apply: () => { petals += 5000; } },
+    ]
+  },
+  rare: {
+    cost: 5, currency: 'coins',
+    pool: [
+      { label: '1 000 🌸', weight: 30, apply: () => { petals += 1000; } },
+      { label: '2 000 🌸', weight: 25, apply: () => { petals += 2000; } },
+      { label: '5 000 🌸', weight: 20, apply: () => { petals += 5000; } },
+      { label: '10 000 🌸', weight: 15, apply: () => { petals += 10000; } },
+      { label: '1 🪙', weight: 8, apply: () => { coins += 1; } },
+      { label: '3 🪙', weight: 2, apply: () => { coins += 3; } },
+    ]
+  }
+};
+
+function pickWeighted(list, totalWeight) {
+  let r = Math.random() * totalWeight;
+  for (const item of list) {
+    if (r < item.weight) return item;
+    r -= item.weight;
+  }
+  return list[list.length - 1];
+}
+
+document.querySelectorAll('.chest-card').forEach(card => {
+  const key = card.getAttribute('data-chest');
+  card.querySelector('button').addEventListener('click', () => {
+    const cfg = chestPools[key];
+    const balance = cfg.currency === 'coins' ? coins : petals;
+    if (balance < cfg.cost) { showToast('Недостаточно средств для этого сундука'); return; }
+    if (cfg.currency === 'coins') coins -= cfg.cost; else petals -= cfg.cost;
+
+    const totalWeight = cfg.pool.reduce((s, p) => s + p.weight, 0);
+    const prize = pickWeighted(cfg.pool, totalWeight);
+    prize.apply();
+    chestsOpened += 1;
+    isDirty = true;
+    updateUI();
+    saveData();
+    document.getElementById('chestResult').textContent = `Выпало: ${prize.label}`;
+  });
+});
+
+// ===== Топ игроков (через Worker) =====
 async function renderLeaderboard(kind) {
   const list = document.getElementById('leaderList');
   if (!list) return;
   list.innerHTML = '<div style="text-align:center;font-size:12.5px;color:#cf9f9f;padding:10px;">Загрузка…</div>';
 
-  const column = kind === 'coins' ? 'coins' : 'petals';
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('telegram_id, petals, coins')
-      .order(column, { ascending: false })
-      .limit(10);
-
-    if (error) {
-      list.innerHTML = '<div style="text-align:center;font-size:12.5px;color:#cf9f9f;padding:10px;">Не удалось загрузить рейтинг</div>';
-      console.error('Ошибка загрузки топа:', error);
+    const data = await getLeaderboard(kind === 'coins' ? 'coins' : 'petals');
+    
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;font-size:12.5px;color:#cf9f9f;padding:10px;">Пока нет данных</div>';
       return;
     }
 
     list.innerHTML = '';
-    (data || []).forEach((row, i) => {
+    data.forEach((row, i) => {
       const isMe = String(row.telegram_id) === String(currentUserId);
       const name = isMe ? 'Ты' : `Игрок #${String(row.telegram_id).slice(-4)}`;
       const val = kind === 'coins' ? (row.coins ?? 0) : (row.petals ?? 0);
@@ -2040,116 +1978,108 @@ async function renderLeaderboard(kind) {
       `;
       list.appendChild(rowEl);
     });
-
-    if (!data || data.length === 0) {
-      list.innerHTML = '<div style="text-align:center;font-size:12.5px;color:#cf9f9f;padding:10px;">Пока нет данных</div>';
-    }
   } catch (e) {
     console.error('Критическая ошибка топа:', e);
     list.innerHTML = '<div style="text-align:center;font-size:12.5px;color:#cf9f9f;padding:10px;">Не удалось загрузить рейтинг</div>';
   }
 }
 
-    document.querySelectorAll('[data-lb]').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('[data-lb]').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        renderLeaderboard(tab.getAttribute('data-lb'));
-      });
+document.querySelectorAll('[data-lb]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('[data-lb]').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    renderLeaderboard(tab.getAttribute('data-lb'));
+  });
+});
+
+// ===== Достижения =====
+document.querySelectorAll('.ach-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const cat = tab.getAttribute('data-cat');
+    document.querySelectorAll('.ach-card').forEach(card => {
+      card.style.display = (cat === 'all' || card.getAttribute('data-category') === cat) ? 'block' : 'none';
     });
+  });
+});
 
-    // ===== Достижения: табы =====
-    document.querySelectorAll('.ach-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        const cat = tab.getAttribute('data-cat');
-        document.querySelectorAll('.ach-card').forEach(card => {
-          card.style.display = (cat === 'all' || card.getAttribute('data-category') === cat) ? 'block' : 'none';
-        });
-      });
-    });
+function checkAchievement(id, current, target, isFlag) {
+  const card = document.getElementById(id);
+  if (!card) return;
+  const valEl = card.querySelector('.ach-val');
+  const done = isFlag ? current === true : current >= target;
 
-    function checkAchievement(id, current, target, isFlag) {
-      const card = document.getElementById(id);
-      if (!card) return;
-      const valEl = card.querySelector('.ach-val');
-      const done = isFlag ? current === true : current >= target;
+  if (valEl) {
+    valEl.textContent = isFlag ? (done ? 'Выполнено' : 'Не выполнено') : Math.min(current, target).toLocaleString();
+  }
 
-      if (valEl) {
-        valEl.textContent = isFlag ? (done ? 'Выполнено' : 'Не выполнено') : Math.min(current, target).toLocaleString();
-      }
-
-      if (done) {
-        card.classList.add('completed');
-        if (!unlockedAchievements[id]) {
-          unlockedAchievements[id] = true;
-          localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
-          const name = card.querySelector('.ach-name').textContent;
-          showToast(`🏆 Достижение открыто: "${name}"!`);
-        }
-      }
+  if (done) {
+    card.classList.add('completed');
+    if (!unlockedAchievements[id]) {
+      unlockedAchievements[id] = true;
+      localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+      const name = card.querySelector('.ach-name').textContent;
+      showToast(`🏆 Достижение открыто: "${name}"!`);
     }
+  }
+}
 
-    function updateAchievements() {
-      checkAchievement('ach_taps_1', totalTaps, 1);
-      checkAchievement('ach_taps_100', totalTaps, 100);
-      checkAchievement('ach_taps_1000', totalTaps, 1000);
-      checkAchievement('ach_taps_10000', totalTaps, 10000);
-      checkAchievement('ach_taps_50000', totalTaps, 50000);
-      checkAchievement('ach_taps_100000', totalTaps, 100000);
-      checkAchievement('ach_taps_1000000', totalTaps, 1000000);
+function updateAchievements() {
+  checkAchievement('ach_taps_1', totalTaps, 1);
+  checkAchievement('ach_taps_100', totalTaps, 100);
+  checkAchievement('ach_taps_1000', totalTaps, 1000);
+  checkAchievement('ach_taps_10000', totalTaps, 10000);
+  checkAchievement('ach_taps_50000', totalTaps, 50000);
+  checkAchievement('ach_taps_100000', totalTaps, 100000);
+  checkAchievement('ach_taps_1000000', totalTaps, 1000000);
 
-      checkAchievement('ach_ex_1', totalExchangesCount, 1);
-      checkAchievement('ach_ex_10', totalExchangesCount, 10);
-      checkAchievement('ach_ex_50', totalExchangesCount, 50);
-      checkAchievement('ach_ex_100', totalExchangesCount, 100);
+  checkAchievement('ach_ex_1', totalExchangesCount, 1);
+  checkAchievement('ach_ex_10', totalExchangesCount, 10);
+  checkAchievement('ach_ex_50', totalExchangesCount, 50);
+  checkAchievement('ach_ex_100', totalExchangesCount, 100);
 
-      checkAchievement('ach_ref_1', refCount, 1);
-      checkAchievement('ach_ref_10', refCount, 10);
-    }
+  checkAchievement('ach_ref_1', refCount, 1);
+  checkAchievement('ach_ref_10', refCount, 10);
+}
 
-    // ===== Скролл табов ачивок (мышь + тач) =====
-    document.querySelectorAll('.ach-tabs-container').forEach(tabRow => {
-      let startX, scrollLeft, moved = false, isDown = false, touching = false;
-      function getPosition(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
-      function handleStart(e) {
-        if (e.type === 'mousedown') isDown = true; else touching = true;
-        moved = false;
-        startX = getPosition(e) - tabRow.getBoundingClientRect().left;
-        scrollLeft = tabRow.scrollLeft;
-        tabRow.style.cursor = 'grabbing';
-      }
-      function handleEnd(e) {
-        isDown = false; touching = false; tabRow.style.cursor = '';
-        if (moved) { e.preventDefault(); e.stopPropagation(); }
-      }
-      function handleMove(e) {
-        if (!isDown && !touching) return;
-        const x = getPosition(e) - tabRow.getBoundingClientRect().left;
-        const walk = (x - startX) * 1.8;
-        if (Math.abs(walk) > 5) { moved = true; tabRow.scrollLeft = scrollLeft - walk; }
-      }
-      tabRow.addEventListener('dragstart', (e) => e.preventDefault());
-      tabRow.addEventListener('mousedown', handleStart);
-      tabRow.addEventListener('mousemove', handleMove);
-      tabRow.addEventListener('mouseup', handleEnd);
-      tabRow.addEventListener('mouseleave', handleEnd);
-      tabRow.addEventListener('touchstart', handleStart, { passive: false });
-      tabRow.addEventListener('touchmove', handleMove, { passive: false });
-      tabRow.addEventListener('touchend', handleEnd);
-      tabRow.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
-    });
+// ===== Скролл табов =====
+document.querySelectorAll('.ach-tabs-container').forEach(tabRow => {
+  let startX, scrollLeft, moved = false, isDown = false, touching = false;
+  function getPosition(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
+  function handleStart(e) {
+    if (e.type === 'mousedown') isDown = true; else touching = true;
+    moved = false;
+    startX = getPosition(e) - tabRow.getBoundingClientRect().left;
+    scrollLeft = tabRow.scrollLeft;
+    tabRow.style.cursor = 'grabbing';
+  }
+  function handleEnd(e) {
+    isDown = false; touching = false; tabRow.style.cursor = '';
+    if (moved) { e.preventDefault(); e.stopPropagation(); }
+  }
+  function handleMove(e) {
+    if (!isDown && !touching) return;
+    const x = getPosition(e) - tabRow.getBoundingClientRect().left;
+    const walk = (x - startX) * 1.8;
+    if (Math.abs(walk) > 5) { moved = true; tabRow.scrollLeft = scrollLeft - walk; }
+  }
+  tabRow.addEventListener('dragstart', (e) => e.preventDefault());
+  tabRow.addEventListener('mousedown', handleStart);
+  tabRow.addEventListener('mousemove', handleMove);
+  tabRow.addEventListener('mouseup', handleEnd);
+  tabRow.addEventListener('mouseleave', handleEnd);
+  tabRow.addEventListener('touchstart', handleStart, { passive: false });
+  tabRow.addEventListener('touchmove', handleMove, { passive: false });
+  tabRow.addEventListener('touchend', handleEnd);
+  tabRow.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
+});
 
-    // ===== СТАРТ =====
-    loadData();
-    renderLeaderboard('petals');
-    setInterval(saveData, 10000);
-    window.addEventListener('beforeunload', saveData);
-    window.addEventListener('pagehide', saveData);
+// ===== СТАРТ =====
+loadData();
+renderLeaderboard('petals');
+setInterval(saveData, 10000);
+window.addEventListener('beforeunload', saveData);
+window.addEventListener('pagehide', saveData);
 
-    console.log('🌸 SAKU TAP ready (v0.3)');
-  })();
-  </script>
-</body>
-</html>
+console.log('🌸 SAKU TAP ready (v0.3)');
