@@ -2176,5 +2176,62 @@ async function renderLeaderboard(kind) {
     console.log('🌸 SAKU TAP ready (v0.3)');
   })();
   </script>
+  <script>
+  // Инициализируем Telegram Web App
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+
+  // 1. Получаем реальный ID пользователя из Telegram
+  // Если приложение открыто в обычном браузере, используем тестовый ID '000000'
+  const userId = tg.initDataUnsafe?.user?.id || "000000";
+  const botUsername = "SakuTapBot"; // Убедитесь, что здесь указан юзернейм вашего бота
+  const refLink = `https://t.me/${botUsername}?start=ref_${userId}`;
+
+  // Находим элементы в HTML
+  const refLinkText = document.getElementById('refLinkText');
+  const copyBtn = document.getElementById('copyRefBtn');
+
+  // Устанавливаем сформированную ссылку в текстовый блок
+  if (refLinkText) {
+    refLinkText.textContent = refLink;
+  }
+
+  // 2. Логика копирования ссылки по клику на кнопку
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      // Копируем ссылку в буфер обмена
+      navigator.clipboard.writeText(refLink).then(() => {
+        showToast("Ссылка скопирована в буфер обмена! 🌸");
+      }).catch(err => {
+        // Резервный вариант, если navigator.clipboard заблокирован браузером
+        const tempInput = document.createElement('input');
+        tempInput.value = refLink;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showToast("Ссылка скопирована! 🌸");
+      });
+    });
+  }
+
+  // Функция для отображения всплывающего уведомления (Toast)
+  // В вашем CSS уже есть стили для .toast и .toast.show, мы просто используем их
+  function showToast(message) {
+    let toast = document.querySelector('.toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.className = 'toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('show');
+    
+    // Скрываем уведомление через 2.5 секунды
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2500);
+  }
+</script>
 </body>
 </html>
