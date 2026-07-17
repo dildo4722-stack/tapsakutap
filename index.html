@@ -1575,8 +1575,7 @@ input[type=number] {
     const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
     const currentUserId = tgId;
 
-    // Глобальная переменная для работы во всем приложении (чтобы была доступна везде)
-    let supabase; 
+
 
     // Функция показа уведомлений
     function showToast(message) {
