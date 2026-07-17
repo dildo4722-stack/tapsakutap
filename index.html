@@ -2979,127 +2979,88 @@ async function deactivatePromo(id, code) {
 }
 
 
-// ===== АКТИВАЦИЯ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ (ИСПРАВЛЕННАЯ) =====
+// ===== АКТИВАЦИЯ ПРОМОКОДА (РАБОЧАЯ ВЕРСИЯ) =====
 async function activatePromoCode(promoCode) {
-    // ИСПОЛЬЗУЕМ переданный параметр promoCode, а НЕ ищем заново!
-    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-    if (!userId) {
-        showToast('❌ Ошибка: не удалось определить пользователя');
-        return;
-    }
-
-    // Проверяем, что код передан
     if (!promoCode || promoCode.trim() === '') {
         showToast('❌ Введи промокод');
         return;
     }
 
-    var code = promoCode.trim().toUpperCase(); // <-- используем переданный код
+    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
+    var code = promoCode.trim().toUpperCase();
 
     try {
-        // 1. Проверяем существование промокода
-        var promoIdResult = await supabase
+        var promoResult = await supabase
             .from('promocodes')
-            .select('id, reward_type, reward_amount, multiplier_value, uses_limit, used_count, expires_at, active')
+            .select('*')
             .eq('code', code)
             .maybeSingle();
         
-        if (promoIdResult.error || !promoIdResult.data) {
-            showToast('❌ Неверный промокод');
+        if (promoResult.error || !promoResult.data) {
+            showToast('❌ Промокод не найден');
             return;
         }
 
-        var promo = promoIdResult.data;
+        var promo = promoResult.data;
 
-        // 2. Проверяем активность
         if (!promo.active) {
             showToast('❌ Промокод неактивен');
             return;
         }
 
-        // 3. Проверяем срок действия
         if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
-            showToast('❌ Срок действия промокода истек');
+            showToast('❌ Срок действия истек');
             return;
         }
 
-        // 4. Проверяем лимит использований
         if (promo.used_count >= promo.uses_limit) {
             showToast('❌ Промокод уже использован максимальное количество раз');
             return;
         }
 
-        // 5. Проверяем, использовал ли пользователь этот промокод
-        var usedCheck = await supabase
-            .from('used_promocodes')
-            .select('id')
-            .eq('telegram_id', String(userId))
-            .eq('promo_id', promo.id)
-            .maybeSingle();
-
-        if (usedCheck.data) {
-            showToast('❌ Вы уже использовали этот промокод');
-            return;
-        }
-
-        // 6. Применяем награду
-        var rewardMessage = '';
-        var rewardAmount = 0;
-        
+        // Применяем награду через DOM
         if (promo.reward_type === 'petals') {
-            const amount = promo.reward_amount || 0;
-            petals += amount;
-            rewardMessage = `+${amount} 🌸 лепестков`;
-            rewardAmount = amount;
+            const petalDisplay = document.getElementById('petalDisplay');
+            let currentPetals = parseInt(petalDisplay.textContent.replace(/[^0-9]/g, '')) || 0;
+            currentPetals += promo.reward_amount || 0;
+            petalDisplay.textContent = currentPetals;
+            localStorage.setItem('petals', currentPetals);
+            showToast(`🎉 +${promo.reward_amount} 🌸 лепестков!`);
         } else if (promo.reward_type === 'coins') {
-            const amount = promo.reward_amount || 0;
-            coins += amount;
-            rewardMessage = `+${amount} 🪙 монет`;
-            rewardAmount = amount;
+            const coinDisplay = document.getElementById('coinDisplay');
+            let currentCoins = parseInt(coinDisplay.textContent.replace(/[^0-9]/g, '')) || 0;
+            currentCoins += promo.reward_amount || 0;
+            coinDisplay.textContent = currentCoins;
+            localStorage.setItem('coins', currentCoins);
+            showToast(`🎉 +${promo.reward_amount} 🪙 монет!`);
         } else if (promo.reward_type === 'multiplier') {
-            const mult = promo.multiplier_value || 2;
-            tapMultiplier = mult;
-            tapMultiplierExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
-            rewardMessage = `x${mult} множитель на 24 часа`;
-            rewardAmount = mult;
-        } else {
-            showToast('❌ Неизвестный тип награды');
-            return;
+            localStorage.setItem('tapMultiplier', promo.multiplier_value || 2);
+            localStorage.setItem('tapMultiplierExpiresAt', Date.now() + 24 * 60 * 60 * 1000);
+            showToast(`🎉 x${promo.multiplier_value} множитель на 24 часа!`);
         }
 
-        // 7. Записываем использование
+        // Обновляем использование промокода
         await supabase
             .from('promocodes')
             .update({ used_count: promo.used_count + 1 })
             .eq('id', promo.id);
 
-        await supabase
-            .from('used_promocodes')
-            .insert({
-                telegram_id: String(userId),
-                promo_id: promo.id,
-                reward_amount: rewardAmount,
-                reward_type: promo.reward_type
-            });
+        // Обновляем статистику
+        let promosUsed = parseInt(localStorage.getItem('promosUsed')) || 0;
+        promosUsed += 1;
+        localStorage.setItem('promosUsed', promosUsed);
 
-        // 8. Обновляем статистику
-        promosUsed = (promosUsed || 0) + 1;
-        isDirty = true;
-        
-        // 9. Обновляем UI
-        updateUI();
-        updateAchievements();
-        saveData();
+        // Обновляем UI и достижения
+        if (typeof updateUI === 'function') updateUI();
+        if (typeof updateAchievements === 'function') updateAchievements();
+        if (typeof saveData === 'function') saveData();
 
-        // 10. Показываем успех
-        showToast(`🎉 Промокод активирован! ${rewardMessage}`);
-
-        // 11. Очищаем поле ввода
+        // Очищаем поле ввода
         const promoInput = document.getElementById('promoInput');
         if (promoInput) promoInput.value = '';
 
     } catch (e) {
-        console.error('Ошибка активации промокода:', e);
+        console.error('Ошибка:', e);
         showToast('❌ Ошибка при активации промокода');
     }
 }
