@@ -2978,75 +2978,89 @@ async function deactivatePromo(id, code) {
     }
 }
 
-// ===== АКТИВАЦИЯ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ =====
+// ===== АКТИВАЦИЯ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ (ПОЛНАЯ ВЕРСИЯ) =====
 async function activatePromoCode(code) {
     var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
     if (!userId) {
-        showToast('Ошибка: не удалось определить пользователя');
+        showToast('❌ Ошибка: не удалось определить пользователя');
         return;
     }
 
     try {
+        // 1. Проверяем существование промокода
         var promoIdResult = await supabase
             .from('promocodes')
-            .select('id')
+            .select('id, reward_type, reward_amount, multiplier_value, uses_limit, used_count, expires_at, active')
             .eq('code', code)
-            .single();
+            .maybeSingle();
         
-        if (promoIdResult.error) {
-            showToast('Неверный промокод');
+        if (promoIdResult.error || !promoIdResult.data) {
+            showToast('❌ Неверный промокод');
             return;
         }
 
+        var promo = promoIdResult.data;
+
+        // 2. Проверяем активность
+        if (!promo.active) {
+            showToast('❌ Промокод неактивен');
+            return;
+        }
+
+        // 3. Проверяем срок действия
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+            showToast('❌ Срок действия промокода истек');
+            return;
+        }
+
+        // 4. Проверяем лимит использований
+        if (promo.used_count >= promo.uses_limit) {
+            showToast('❌ Промокод уже использован максимальное количество раз');
+            return;
+        }
+
+        // 5. Проверяем, использовал ли пользователь этот промокод
         var usedCheck = await supabase
             .from('used_promocodes')
             .select('id')
             .eq('telegram_id', userId)
-            .eq('promo_id', promoIdResult.data.id)
+            .eq('promo_id', promo.id)
             .maybeSingle();
 
         if (usedCheck.data) {
-            showToast('Вы уже использовали этот промокод');
+            showToast('❌ Вы уже использовали этот промокод');
             return;
         }
 
-        var promoResult = await supabase
-            .from('promocodes')
-            .select('*')
-            .eq('code', code)
-            .eq('active', true)
-            .maybeSingle();
-
-        if (promoResult.error || !promoResult.data) {
-            showToast('Неверный или неактивный промокод');
-            return;
-        }
-
-        var promo = promoResult.data;
-
-        if (promo.used_count >= promo.uses_limit) {
-            showToast('Промокод уже использован максимальное количество раз');
-            return;
-        }
-
-        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
-            showToast('Срок действия промокода истек');
-            return;
-        }
-
+        // 6. Применяем награду
         var rewardMessage = '';
+        var rewardAmount = 0;
+        
         if (promo.reward_type === 'petals') {
-            petals += promo.reward_amount;
-            rewardMessage = '+' + promo.reward_amount + ' лепестков';
+            // Добавляем лепестки
+            const amount = promo.reward_amount || 0;
+            petals += amount;
+            rewardMessage = `+${amount} 🌸 лепестков`;
+            rewardAmount = amount;
         } else if (promo.reward_type === 'coins') {
-            coins += promo.reward_amount;
-            rewardMessage = '+' + promo.reward_amount + ' монет';
+            // Добавляем монеты
+            const amount = promo.reward_amount || 0;
+            coins += amount;
+            rewardMessage = `+${amount} 🪙 монет`;
+            rewardAmount = amount;
         } else if (promo.reward_type === 'multiplier') {
-            tapMultiplier = promo.multiplier_value;
-            tapMultiplierExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
-            rewardMessage = 'x' + promo.multiplier_value + ' на 24 часа';
+            // Добавляем множитель
+            const mult = promo.multiplier_value || 2;
+            tapMultiplier = mult;
+            tapMultiplierExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 часа
+            rewardMessage = `x${mult} множитель на 24 часа`;
+            rewardAmount = mult;
+        } else {
+            showToast('❌ Неизвестный тип награды');
+            return;
         }
 
+        // 7. Записываем использование
         await supabase
             .from('promocodes')
             .update({ used_count: promo.used_count + 1 })
@@ -3055,26 +3069,32 @@ async function activatePromoCode(code) {
         await supabase
             .from('used_promocodes')
             .insert({
-                telegram_id: userId,
+                telegram_id: String(userId),
                 promo_id: promo.id,
-                reward_amount: promo.reward_amount || 0,
+                reward_amount: rewardAmount,
                 reward_type: promo.reward_type
             });
 
-        promosUsed += 1;
+        // 8. Обновляем статистику промокодов
+        promosUsed = (promosUsed || 0) + 1;
         isDirty = true;
+        
+        // 9. Обновляем UI
         updateUI();
         updateAchievements();
         saveData();
 
-        showToast('Промокод активирован! ' + rewardMessage);
+        // 10. Показываем успех
+        showToast(`🎉 Промокод активирован! ${rewardMessage}`);
+
+        // 11. Очищаем поле ввода
+        document.getElementById('promoInput').value = '';
 
     } catch (e) {
         console.error('Ошибка активации промокода:', e);
-        showToast('Ошибка при активации промокода');
+        showToast('❌ Ошибка при активации промокода');
     }
 }
-
 // ===== ИНИЦИАЛИЗАЦИЯ АДМИН-ПАНЕЛИ =====
 async function initAdminPanel() {
     var isAdmin = await checkAdminAccess();
