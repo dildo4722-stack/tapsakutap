@@ -2797,8 +2797,50 @@ async function checkAdminAccess() {
     }
 }
 
-// ===== СОЗДАНИЕ ПРОМОКОДА =====
+// ===== СОЗДАНИЕ ПРОМОКОДА С ПРОВЕРКОЙ АДМИНА =====
 async function createPromoCode() {
+    // ============================================================
+    // 1. ПРОВЕРКА: ЯВЛЯЕТСЯ ЛИ ПОЛЬЗОВАТЕЛЬ АДМИНОМ
+    // ============================================================
+    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    
+    if (!userId) {
+        showToast('❌ Ошибка авторизации. Перезапустите приложение.');
+        console.error('Не удалось получить ID пользователя');
+        return;
+    }
+
+    try {
+        // Проверяем права администратора
+        var { data: user, error } = await supabase
+            .from('users')
+            .select('is_admin')
+            .eq('telegram_id', String(userId))
+            .maybeSingle();
+
+        if (error) {
+            console.error('Ошибка проверки прав:', error);
+            showToast('❌ Ошибка проверки прав доступа');
+            return;
+        }
+
+        if (!user || !user.is_admin) {
+            showToast('❌ Только администратор может создавать промокоды!');
+            console.warn('Доступ запрещён для пользователя:', userId);
+            return;
+        }
+
+        console.log('✅ Права администратора подтверждены для:', userId);
+
+    } catch (e) {
+        console.error('Критическая ошибка при проверке прав:', e);
+        showToast('❌ Ошибка проверки прав доступа');
+        return;
+    }
+
+    // ============================================================
+    // 2. ДАЛЬШЕ КОД СОЗДАНИЯ ПРОМОКОДА
+    // ============================================================
     var code = document.getElementById('promoCodeName').value.trim().toUpperCase();
     var type = document.getElementById('promoType').value;
     var reward = parseInt(document.getElementById('promoRewardVal').value);
@@ -2827,8 +2869,6 @@ async function createPromoCode() {
         return;
     }
 
-    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
-
     var promoData = {
         code: code,
         reward_type: type,
@@ -2849,15 +2889,15 @@ async function createPromoCode() {
 
         if (error) {
             if (error.code === '23505') {
-                showToast('Промокод с таким названием уже существует');
+                showToast('❌ Промокод с таким названием уже существует');
             } else {
-                showToast('Ошибка создания: ' + error.message);
+                showToast('❌ Ошибка создания: ' + error.message);
             }
             console.error('Ошибка создания промокода:', error);
             return;
         }
 
-        showToast('Промокод "' + code + '" создан');
+        showToast('✅ Промокод "' + code + '" создан!');
         document.getElementById('promoCodeName').value = '';
         document.getElementById('promoRewardVal').value = '';
         document.getElementById('promoUses').value = '1';
@@ -2865,10 +2905,9 @@ async function createPromoCode() {
         
     } catch (e) {
         console.error('Критическая ошибка:', e);
-        showToast('Ошибка при создании промокода');
+        showToast('❌ Ошибка при создании промокода');
     }
 }
-
 // ===== ЗАГРУЗКА СПИСКА ПРОМОКОДОВ =====
 async function loadPromoCodes() {
     var container = document.getElementById('promoList');
