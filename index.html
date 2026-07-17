@@ -3098,22 +3098,35 @@ document.getElementById('broadcastPromoBtn')?.addEventListener('click', async fu
     showToast('Рассылка промокода "' + code + '" запущена');
 });
 
-document.getElementById('promoBtn')?.addEventListener('click', function() {
-    const input = document.getElementById('promoInput');
-    if (!input) {
-        showToast('❌ Ошибка: поле ввода не найдено');
-        return;
-    }
+// ===== ПЕРЕСОЗДАЁМ КНОПКУ ПРОМОКОДА =====
+const oldBtn = document.getElementById('promoBtn');
+if (oldBtn) {
+    const parent = oldBtn.parentNode;
+    const newBtn = document.createElement('button');
+    newBtn.className = 'btn';
+    newBtn.id = 'promoBtn';
+    newBtn.textContent = 'Активировать';
+    parent.replaceChild(newBtn, oldBtn);
     
-    const code = input.value.trim().toUpperCase();
-    if (!code) {
-        showToast('❌ Введи промокод');
-        return;
-    }
-    
-    console.log('🔑 Активация промокода:', code); // <-- для отладки
-    activatePromoCode(code);
-});
+    newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const input = document.getElementById('promoInput');
+        if (!input) {
+            showToast('❌ Ошибка: поле ввода не найдено');
+            return;
+        }
+        
+        const code = input.value.trim().toUpperCase();
+        if (!code) {
+            showToast('❌ Введи промокод');
+            return;
+        }
+        
+        activatePromoCode(code);
+    });
+}
 
 // ===== ВЫЗОВ ПРИ ЗАГРУЗКЕ =====
 setTimeout(function() {
