@@ -1272,9 +1272,6 @@ input[type=number] {
         <button class="ach-tab" data-cat="quests">Задания</button>
         <button class="ach-tab" data-cat="refs">Рефералы</button>
         <button class="ach-tab" data-cat="rating">Рейтинг</button>
-        <button class="ach-tab" data-cat="rocket">Ракета</button>
-        <button class="ach-tab" data-cat="slots">Слоты</button>
-        <button class="ach-tab" data-cat="mines">Мины</button>
         <button class="ach-tab" data-cat="level">Уровень</button>
         <button class="ach-tab" data-cat="seasons">Сезоны</button>
         <button class="ach-tab" data-cat="promos">Промокоды</button>
@@ -1432,6 +1429,18 @@ input[type=number] {
           <div class="ach-status-line">Прогресс: <span class="ach-val">0</span> / 50</div>
         </div>
 
+        <div class="card ach-card" data-category="quests" id="ach_q_250">
+  <div class="row-between"><span class="ach-name">Мастер заданий</span></div>
+  <div class="ach-desc">Выполнить 250 заданий.</div>
+  <div class="ach-status-line">Прогресс: <span class="ach-val">0</span> / 250</div>
+</div>
+
+<div class="card ach-card" data-category="quests" id="ach_q_1000">
+  <div class="row-between"><span class="ach-name">Король заданий</span></div>
+  <div class="ach-desc">Выполнить 1000 заданий.</div>
+  <div class="ach-status-line">Прогресс: <span class="ach-val">0</span> / 1000</div>
+</div>
+
         <div class="card ach-card" data-category="refs" id="ach_ref_1">
           <div class="row-between"><span class="ach-name">Первый друг</span></div>
           <div class="ach-desc">Пригласить первого пользователя.</div>
@@ -1444,11 +1453,85 @@ input[type=number] {
           <div class="ach-status-line">Прогресс: <span class="ach-val">0</span> / 10</div>
         </div>
 
+        <div class="card ach-card" data-category="refs" id="ach_ref_50">
+  <div class="row-between"><span class="ach-name">Организатор</span></div>
+  <div class="ach-desc">Пригласить 50 друзей.</div>
+  <div class="ach-status-line">Прогресс: <span class="ach-val">0</span> / 50</div>
+</div>
+
+<div class="card ach-card" data-category="refs" id="ach_ref_100">
+  <div class="row-between"><span class="ach-name">Амбассадор SAKU TAP</span></div>
+  <div class="ach-desc">Пригласить 100 друзей.</div>
+  <div class="ach-status-line">Прогресс: <span class="ach-val">0</span> / 100</div>
+</div>
+
         <div class="card ach-card" data-category="rocket" id="ach_rock_100">
           <div class="row-between"><span class="ach-name">Легенда космоса</span></div>
           <div class="ach-desc">Забрать выигрыш на коэффициенте ×100.</div>
           <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
         </div>
+
+        <div class="card ach-card" data-category="rating" id="ach_rating_100">
+  <div class="row-between"><span class="ach-name">ТОП-100</span></div>
+  <div class="ach-desc">Попасть в ТОП-100 игроков.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="rating" id="ach_rating_10">
+  <div class="row-between"><span class="ach-name">ТОП-10</span></div>
+  <div class="ach-desc">Попасть в ТОП-10 игроков.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="rating" id="ach_rating_1">
+  <div class="row-between"><span class="ach-name">Первое место</span></div>
+  <div class="ach-desc">Стать №1 в сезоне.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="rating" id="ach_rating_legend">
+  <div class="row-between"><span class="ach-name">Легенда рейтинга</span></div>
+  <div class="ach-desc">Победить в 10 сезонах.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<!-- Сезоны -->
+<div class="card ach-card" data-category="seasons" id="ach_season_1">
+  <div class="row-between"><span class="ach-name">Первый сезон</span></div>
+  <div class="ach-desc">Принять участие в сезоне.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="seasons" id="ach_season_win">
+  <div class="row-between"><span class="ach-name">Победитель сезона</span></div>
+  <div class="ach-desc">Получить сезонную награду.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="seasons" id="ach_season_champion">
+  <div class="row-between"><span class="ach-name">Чемпион SAKU TAP</span></div>
+  <div class="ach-desc">Победить в сезоне.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<!-- Промокоды -->
+<div class="card ach-card" data-category="promos" id="ach_promo_1">
+  <div class="row-between"><span class="ach-name">Первый счастливчик</span></div>
+  <div class="ach-desc">Получить первый промокод.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="promos" id="ach_promo_10">
+  <div class="row-between"><span class="ach-name">Любимчик Саку</span></div>
+  <div class="ach-desc">Получить 10 промокодов.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
+
+<div class="card ach-card" data-category="promos" id="ach_promo_50">
+  <div class="row-between"><span class="ach-name">Охотник за промокодами</span></div>
+  <div class="ach-desc">Получить 50 промокодов.</div>
+  <div class="ach-status-line">Статус: <span class="ach-val">Не выполнено</span></div>
+</div>
 
       </div>
     </div>
@@ -1559,6 +1642,16 @@ input[type=number] {
     let chestsOpened = 0;
     let unlockedAchievements = JSON.parse(localStorage.getItem('unlockedAchievements')) || {};
     let isDirty = false;
+
+    let wheelSpinsCount = 0;           // количество вращений колеса
+let hasWonRarePrize = false;       // выигран ли редкий приз
+let hasWonJackpot = false;         // выигран ли джекпот
+let totalQuestsCompleted = 0;       // выполненные задания
+let userRatingRank = 999;          // место в рейтинге
+let seasonsParticipated = 0;        // сезоны, в которых участвовал
+let seasonsWon = 0;                // выигранные сезоны
+let seasonalRewardReceived = false; // получена ли сезонная награда
+let promosUsed = 0;                // использованные промокоды
 
     function formatNumber(n) {
       if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -1852,6 +1945,14 @@ document.getElementById('copyRefBtn')?.addEventListener('click', function() {
         showToast(`🎉 Задание выполнено: 5 000 тапов! +${TAP_TASK_REWARD} 🌸 начислено`);
       }
     }
+    // ===== ВЫПОЛНЕНИЕ ЗАДАНИЯ =====
+function completeQuest() {
+    totalQuestsCompleted += 1;
+    isDirty = true;
+    updateAchievements();
+    saveData();
+    showToast(`✅ Задание выполнено! (${totalQuestsCompleted}/1000)`);
+}
 
     function handleTap(e) {
       if (e) e.preventDefault();
@@ -2029,6 +2130,18 @@ document.getElementById('copyRefBtn')?.addEventListener('click', function() {
       const idx = pickWeightedIndex(wheelPrizes, wheelTotalWeight);
       const prize = wheelPrizes[idx];
 
+      wheelSpinsCount += 1;
+  
+  // Проверка на редкий приз (x3 и x4 считаем редкими)
+  if (prize.mult >= 3) {
+    hasWonRarePrize = true;
+  }
+  
+  // Проверка на джекпот (x4)
+  if (prize.mult === 4) {
+    hasWonJackpot = true;
+  }
+
       // сегмент i занимает [i*90, i*90+90) градусов от верха по часовой стрелке
       const segmentCenter = idx * 90 + 45;
       const spins = 4 + Math.floor(Math.random() * 3);
@@ -2040,6 +2153,7 @@ document.getElementById('copyRefBtn')?.addEventListener('click', function() {
   tapMultiplierExpiresAt = Date.now() + 6 * 60 * 60 * 1000; // ровно 6 часов
   isDirty = true;
   updateUI();
+  updateAchievements();
   saveData();
   showToast(`🎉 Выпало: ${prize.label} — теперь 1 тап = ${prize.mult} 🌸 (на 6 часов)`);
   wheelSpinning = false;
@@ -2275,6 +2389,7 @@ async function renderLeaderboard(kind) {
     }
 
     function updateAchievements() {
+      // ===== ТАПЫ =====
       checkAchievement('ach_taps_1', totalTaps, 1);
       checkAchievement('ach_taps_100', totalTaps, 100);
       checkAchievement('ach_taps_1000', totalTaps, 1000);
@@ -2283,13 +2398,57 @@ async function renderLeaderboard(kind) {
       checkAchievement('ach_taps_100000', totalTaps, 100000);
       checkAchievement('ach_taps_1000000', totalTaps, 1000000);
 
+      // ===== ЛЕПЕСТКИ =====
+      checkAchievement('ach_pet_100', petals, 100);
+      checkAchievement('ach_pet_10k', petals, 10000);
+      checkAchievement('ach_pet_100k', petals, 100000);
+      checkAchievement('ach_pet_1m', petals, 1000000);
+
+      // ===== ОБМЕН =====
       checkAchievement('ach_ex_1', totalExchangesCount, 1);
       checkAchievement('ach_ex_10', totalExchangesCount, 10);
       checkAchievement('ach_ex_50', totalExchangesCount, 50);
       checkAchievement('ach_ex_100', totalExchangesCount, 100);
 
+      // ===== КОЛЕСО =====
+      checkAchievement('ach_spin_1', wheelSpinsCount, 1);
+      checkAchievement('ach_spin_rare', hasWonRarePrize, true);
+      checkAchievement('ach_spin_100', wheelSpinsCount, 100);
+      checkAchievement('ach_spin_jackpot', hasWonJackpot, true);
+
+      // ===== АКТИВНОСТЬ =====
+      checkAchievement('ach_act_1', loginStreak, 1);
+      checkAchievement('ach_act_7', loginStreak, 7);
+      checkAchievement('ach_act_30', loginStreak, 30);
+      checkAchievement('ach_act_100', loginStreak, 100);
+
+      // ===== ЗАДАНИЯ =====
+      checkAchievement('ach_q_1', totalQuestsCompleted, 1);
+      checkAchievement('ach_q_50', totalQuestsCompleted, 50);
+      checkAchievement('ach_q_250', totalQuestsCompleted, 250);
+      checkAchievement('ach_q_1000', totalQuestsCompleted, 1000);
+
+      // ===== РЕФЕРАЛЫ =====
       checkAchievement('ach_ref_1', refCount, 1);
       checkAchievement('ach_ref_10', refCount, 10);
+      checkAchievement('ach_ref_50', refCount, 50);
+      checkAchievement('ach_ref_100', refCount, 100);
+
+      // ===== РЕЙТИНГ =====
+      checkAchievement('ach_rating_100', userRatingRank <= 100, true);
+      checkAchievement('ach_rating_10', userRatingRank <= 10, true);
+      checkAchievement('ach_rating_1', userRatingRank === 1, true);
+      checkAchievement('ach_rating_legend', seasonsWon >= 10, true);
+
+      // ===== СЕЗОНЫ =====
+      checkAchievement('ach_season_1', seasonsParticipated >= 1, true);
+      checkAchievement('ach_season_win', seasonalRewardReceived, true);
+      checkAchievement('ach_season_champion', seasonsWon >= 1, true);
+
+      // ===== ПРОМОКОДЫ =====
+      checkAchievement('ach_promo_1', promosUsed >= 1, true);
+      checkAchievement('ach_promo_10', promosUsed >= 10, true);
+      checkAchievement('ach_promo_50', promosUsed >= 50, true);
     }
 
     // ===== Скролл табов ачивок (мышь + тач) =====
@@ -2450,27 +2609,63 @@ setTimeout(() => {
       </div>
     </div>
 
-    <!-- Раздел: Промокоды -->
-    <div class="admin-tab-content" id="admin-promos" style="display:none;">
-      <div class="card">
-        <input type="text" class="input" id="promoCodeName" placeholder="Код (напр: SAKU2026)">
-        <select class="input" id="promoType" style="background:#1a0b0b; color:#fce1e1;">
-          <option value="coins">На монеты</option>
-          <option value="sakura">На сакуры</option>
-          <option value="x1">Мультипликатор x1</option>
-          <option value="x2">Мультипликатор x2</option>
-          <option value="x3">Мультипликатор x3</option>
-          <option value="x4">Мультипликатор x4</option>
-        </select>
-        <input type="number" class="input" id="promoRewardVal" placeholder="Размер награды (для монет/сакур)">
-        <input type="number" class="input" id="promoUses" placeholder="Количество активаций">
-        
-        <div style="display:flex; gap:10px; margin-top:5px;">
-          <button class="btn" id="createPromoBtn">Создать</button>
-          <button class="btn secondary" id="broadcastPromoBtn" style="white-space:nowrap;">Рассылка кода</button>
-        </div>
-      </div>
+    <!-- Раздел: Промокоды (в админ-панели) -->
+<div class="admin-tab-content" id="admin-promos" style="display:none;">
+  <div class="card">
+    
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd27a" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor"/>
+        <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span style="font-size:13px; color:#cf9f9f;">Создать промокод</span>
     </div>
+    
+    <input type="text" class="input" id="promoCodeName" placeholder="Код (напр: SAKU2026)">
+    
+    <select class="input" id="promoType" style="background:#1a0b0b; color:#fce1e1;">
+      <option value="petals">Лепестки</option>
+      <option value="coins">Монеты</option>
+      <option value="multiplier">Мультипликатор</option>
+    </select>
+    
+    <input type="number" class="input" id="promoRewardVal" placeholder="Размер награды">
+    
+    <input type="number" class="input" id="promoMultiplierVal" placeholder="Множитель (только для мультипликатора)" value="2">
+    
+    <input type="number" class="input" id="promoUses" placeholder="Количество активаций (1-999)" value="1">
+    
+    <input type="datetime-local" class="input" id="promoExpires" placeholder="Срок действия (необязательно)">
+    
+    <div style="display:flex; gap:10px; margin-top:5px;">
+      <button class="btn" id="createPromoBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline; vertical-align:middle; margin-right:6px;">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-linecap="round"/>
+        </svg>
+        Создать
+      </button>
+      <button class="btn secondary" id="broadcastPromoBtn" style="white-space:nowrap;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; vertical-align:middle; margin-right:6px;">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Рассылка
+      </button>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-top:10px;">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cf9f9f" stroke-width="2">
+        <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor"/>
+        <path d="M8 8h8M8 12h6M8 16h4" stroke="currentColor" stroke-linecap="round"/>
+      </svg>
+      <span style="font-size:13px; color:#cf9f9f;">Активные промокоды</span>
+    </div>
+    <div id="promoList" style="max-height:250px; overflow-y:auto;">
+      <div style="text-align:center; font-size:12px; color:#cf9f9f; padding:10px;">Загрузка...</div>
+    </div>
+  </div>
+</div>
 
     <!-- Раздел: Пользователи -->
     <div class="admin-tab-content" id="admin-users" style="display:none;">
@@ -2564,6 +2759,330 @@ document.querySelectorAll('#adminTabs .tab-btn').forEach(tab => {
         if (target) target.style.display = 'block';
     });
 });
+// ============================================
+// ===== АДМИН-ПАНЕЛЬ: СИСТЕМА ПРОМОКОДОВ =====
+// ============================================
+
+function getRewardIcon(type) {
+    if (type === 'petals') {
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff9fb3" stroke-width="2"><path d="M12 2C8 4 4 8 4 12c0 4 4 8 8 8s8-4 8-8c0-4-4-8-8-8z" stroke="currentColor"/><path d="M12 6v12M8 9.5c1.5-1 3.5-1.5 5-1.5" stroke="currentColor" stroke-linecap="round"/></svg>';
+    } else if (type === 'coins') {
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd27a" stroke-width="2"><circle cx="12" cy="12" r="10" stroke="currentColor"/><path d="M12 8v8M9 11c0-1.5 1.5-3 3-3s3 1.5 3 3-1.5 3-3 3-3 1.5-3 3 1.5 3 3 3 3-1.5 3-3" stroke="currentColor" stroke-linecap="round"/></svg>';
+    } else {
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a3ff" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+}
+
+// ===== ПРОВЕРКА ПРАВ АДМИНА =====
+async function checkAdminAccess() {
+    try {
+        var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        if (!userId) return false;
+
+        var { data, error } = await supabase
+            .from('users')
+            .select('is_admin')
+            .eq('telegram_id', userId)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Ошибка проверки прав:', error);
+            return false;
+        }
+
+        return data?.is_admin === true;
+    } catch (e) {
+        console.error('Ошибка:', e);
+        return false;
+    }
+}
+
+// ===== СОЗДАНИЕ ПРОМОКОДА =====
+async function createPromoCode() {
+    var code = document.getElementById('promoCodeName').value.trim().toUpperCase();
+    var type = document.getElementById('promoType').value;
+    var reward = parseInt(document.getElementById('promoRewardVal').value);
+    var multiplier = parseInt(document.getElementById('promoMultiplierVal').value) || 1;
+    var uses = parseInt(document.getElementById('promoUses').value) || 1;
+    var expires = document.getElementById('promoExpires').value;
+
+    if (!code) {
+        showToast('Введи код промокода');
+        return;
+    }
+    if (code.length < 3) {
+        showToast('Код должен быть минимум 3 символа');
+        return;
+    }
+    if (type === 'multiplier' && multiplier < 2) {
+        showToast('Множитель должен быть больше 1');
+        return;
+    }
+    if (type !== 'multiplier' && (!reward || reward <= 0)) {
+        showToast('Укажи размер награды');
+        return;
+    }
+    if (uses < 1 || uses > 999) {
+        showToast('Количество активаций от 1 до 999');
+        return;
+    }
+
+    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
+
+    var promoData = {
+        code: code,
+        reward_type: type,
+        reward_amount: type === 'multiplier' ? 0 : reward,
+        multiplier_value: type === 'multiplier' ? multiplier : 1,
+        uses_limit: uses,
+        used_count: 0,
+        expires_at: expires || null,
+        created_by: userId,
+        active: true
+    };
+
+    try {
+        var { data, error } = await supabase
+            .from('promocodes')
+            .insert([promoData])
+            .select();
+
+        if (error) {
+            if (error.code === '23505') {
+                showToast('Промокод с таким названием уже существует');
+            } else {
+                showToast('Ошибка создания: ' + error.message);
+            }
+            console.error('Ошибка создания промокода:', error);
+            return;
+        }
+
+        showToast('Промокод "' + code + '" создан');
+        document.getElementById('promoCodeName').value = '';
+        document.getElementById('promoRewardVal').value = '';
+        document.getElementById('promoUses').value = '1';
+        loadPromoCodes();
+        
+    } catch (e) {
+        console.error('Критическая ошибка:', e);
+        showToast('Ошибка при создании промокода');
+    }
+}
+
+// ===== ЗАГРУЗКА СПИСКА ПРОМОКОДОВ =====
+async function loadPromoCodes() {
+    var container = document.getElementById('promoList');
+    if (!container) return;
+
+    try {
+        var { data, error } = await supabase
+            .from('promocodes')
+            .select('*')
+            .eq('active', true)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:10px;">Нет активных промокодов</div>';
+            return;
+        }
+
+        container.innerHTML = data.map(function(promo) {
+            var icon = getRewardIcon(promo.reward_type);
+            var rewardText = promo.reward_type === 'petals' ? 'Лепестки' :
+                            promo.reward_type === 'coins' ? 'Монеты' : 'Множитель';
+            var rewardAmount = promo.reward_type === 'multiplier' ? 
+                              'x' + promo.multiplier_value : 
+                              promo.reward_amount;
+            var used = promo.used_count + '/' + promo.uses_limit;
+            
+            return '<div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.08);">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                    '<span style="font-weight:700; color:#ffd27a;">' + promo.code + '</span>' +
+                    '<span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#cf9f9f;">' + icon + ' ' + rewardText + ' ' + rewardAmount + '</span>' +
+                '</div>' +
+                '<div style="display:flex; justify-content:space-between; font-size:11px; color:#8a7a7a; margin-top:4px;">' +
+                    '<span>Использовано: ' + used + '</span>' +
+                    '<span>Создан: ' + new Date(promo.created_at).toLocaleDateString() + '</span>' +
+                '</div>' +
+                '<button class="btn secondary" style="font-size:10px; padding:4px 10px; margin-top:6px; width:auto;" onclick="deactivatePromo(' + promo.id + ', \'' + promo.code + '\')">' +
+                    'Деактивировать' +
+                '</button>' +
+            '</div>';
+        }).join('');
+
+    } catch (e) {
+        console.error('Ошибка загрузки промокодов:', e);
+        container.innerHTML = '<div style="text-align:center; font-size:12px; color:#ff5f85; padding:10px;">Ошибка загрузки</div>';
+    }
+}
+
+// ===== ДЕАКТИВАЦИЯ ПРОМОКОДА =====
+async function deactivatePromo(id, code) {
+    if (!confirm('Деактивировать промокод "' + code + '"?')) return;
+
+    try {
+        var { error } = await supabase
+            .from('promocodes')
+            .update({ active: false })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        showToast('Промокод "' + code + '" деактивирован');
+        loadPromoCodes();
+    } catch (e) {
+        console.error('Ошибка деактивации:', e);
+        showToast('Ошибка деактивации');
+    }
+}
+
+// ===== АКТИВАЦИЯ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ =====
+async function activatePromoCode(code) {
+    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    if (!userId) {
+        showToast('Ошибка: не удалось определить пользователя');
+        return;
+    }
+
+    try {
+        var promoIdResult = await supabase
+            .from('promocodes')
+            .select('id')
+            .eq('code', code)
+            .single();
+        
+        if (promoIdResult.error) {
+            showToast('Неверный промокод');
+            return;
+        }
+
+        var usedCheck = await supabase
+            .from('used_promocodes')
+            .select('id')
+            .eq('telegram_id', userId)
+            .eq('promo_id', promoIdResult.data.id)
+            .maybeSingle();
+
+        if (usedCheck.data) {
+            showToast('Вы уже использовали этот промокод');
+            return;
+        }
+
+        var promoResult = await supabase
+            .from('promocodes')
+            .select('*')
+            .eq('code', code)
+            .eq('active', true)
+            .maybeSingle();
+
+        if (promoResult.error || !promoResult.data) {
+            showToast('Неверный или неактивный промокод');
+            return;
+        }
+
+        var promo = promoResult.data;
+
+        if (promo.used_count >= promo.uses_limit) {
+            showToast('Промокод уже использован максимальное количество раз');
+            return;
+        }
+
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+            showToast('Срок действия промокода истек');
+            return;
+        }
+
+        var rewardMessage = '';
+        if (promo.reward_type === 'petals') {
+            petals += promo.reward_amount;
+            rewardMessage = '+' + promo.reward_amount + ' лепестков';
+        } else if (promo.reward_type === 'coins') {
+            coins += promo.reward_amount;
+            rewardMessage = '+' + promo.reward_amount + ' монет';
+        } else if (promo.reward_type === 'multiplier') {
+            tapMultiplier = promo.multiplier_value;
+            tapMultiplierExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+            rewardMessage = 'x' + promo.multiplier_value + ' на 24 часа';
+        }
+
+        await supabase
+            .from('promocodes')
+            .update({ used_count: promo.used_count + 1 })
+            .eq('id', promo.id);
+
+        await supabase
+            .from('used_promocodes')
+            .insert({
+                telegram_id: userId,
+                promo_id: promo.id,
+                reward_amount: promo.reward_amount || 0,
+                reward_type: promo.reward_type
+            });
+
+        promosUsed += 1;
+        isDirty = true;
+        updateUI();
+        updateAchievements();
+        saveData();
+
+        showToast('Промокод активирован! ' + rewardMessage);
+
+    } catch (e) {
+        console.error('Ошибка активации промокода:', e);
+        showToast('Ошибка при активации промокода');
+    }
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ АДМИН-ПАНЕЛИ =====
+async function initAdminPanel() {
+    var isAdmin = await checkAdminAccess();
+    if (isAdmin) {
+        document.getElementById('adminRow').style.display = 'grid';
+        await loadPromoCodes();
+        console.log('Админ-панель активирована');
+    }
+}
+
+// ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
+document.getElementById('createPromoBtn')?.addEventListener('click', createPromoCode);
+
+document.getElementById('broadcastPromoBtn')?.addEventListener('click', async function() {
+    var code = document.getElementById('promoCodeName').value.trim().toUpperCase();
+    if (!code) {
+        showToast('Сначала создай промокод');
+        return;
+    }
+    
+    var promoResult = await supabase
+        .from('promocodes')
+        .select('code')
+        .eq('code', code)
+        .maybeSingle();
+    
+    if (promoResult.error || !promoResult.data) {
+        showToast('Промокод не найден. Сначала создай его');
+        return;
+    }
+    
+    showToast('Рассылка промокода "' + code + '" запущена');
+});
+
+document.getElementById('promoBtn')?.addEventListener('click', function() {
+    var code = document.getElementById('promoInput').value.trim().toUpperCase();
+    if (!code) {
+        showToast('Введи промокод');
+        return;
+    }
+    activatePromoCode(code);
+});
+
+// ===== ВЫЗОВ ПРИ ЗАГРУЗКЕ =====
+setTimeout(function() {
+    initAdminPanel();
+}, 1500);
 </script>
 </body>
 </html>
