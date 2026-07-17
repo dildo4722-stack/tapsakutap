@@ -1537,28 +1537,8 @@ input[type=number] {
     </div>
   </div>
 
-  <style>
-    .ach-tab {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.6);
-      padding: 8px 16px;
-      line-height: 1.2;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      white-space: nowrap;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .ach-tab.active {
-      background: #ffb3c6;
-      border-color: #ffb3c6;
-      color: #311b22;
-    }
+  
+      <style>
     .ach-card {
       transition: border 0.25s ease, background 0.25s ease;
     }
@@ -1584,39 +1564,58 @@ input[type=number] {
     }
   </style>
 
+  <!-- Оставляем один элемент для уведомлений -->
   <div class="toast" id="toast"></div>
 
+  <!-- Подключаем библиотеку Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Главный скрипт приложения -->
   <script>
     const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
     const currentUserId = tgId;
-  (function() {
-    "use strict";
 
-    // ===== SUPABASE =====
-    const SUPABASE_URL = 'https://imqsosdpeelbhkcufbpx.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltcXNvc2RwZWVsYmhrY3VmYnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMzc4MzQsImV4cCI6MjA5OTcxMzgzNH0.9VMGH_DJjZCcc0IwEZWqreP92uBz08fLAOI6aQsrcHE';
-    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const supabase = window.supabaseClient;
-    
+    // Глобальная переменная для работы во всем приложении (чтобы была доступна везде)
+    let supabase; 
 
+    // Функция показа уведомлений
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      
+      toast.innerText = message;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
 
+    (function() {
+      "use strict";
 
-// Вызываем при загрузке (после loadData)
-    // ===== DOM =====
-    const tapBtn = document.getElementById('tapButton');
-    const petalDisplay = document.getElementById('petalDisplay');
-    const coinDisplay = document.getElementById('coinDisplay');
-    const energyFill = document.getElementById('energyFill');
-    const energyText = document.getElementById('energyText');
-    const toastEl = document.getElementById('toast');
-    const usernameEl = document.getElementById('username');
-    const avatarEl = document.getElementById('avatar');
-    const loginStreakEl = document.getElementById('loginStreak');
-    const refCountEl = document.getElementById('refCount');
+      // ===== SUPABASE =====
+      const SUPABASE_URL = 'https://imqsosdpeelbhkcufbpx.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltcXNvc2RwZWVsYmhrY3VmYnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMzc4MzQsImV4cCI6MjA5OTcxMzgzNH0.9VMGH_DJjZCcc0IwEZWqreP92uBz08fLAOI6aQsrcHE';
+      
+      window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      supabase = window.supabaseClient; 
 
-    usernameEl.textContent = 'Сакура';
-    avatarEl.textContent = 'С';
+      // ===== DOM ЭЛЕМЕНТЫ =====
+      const tapBtn = document.getElementById('tapButton');
+      const petalDisplay = document.getElementById('petalDisplay');
+      const coinDisplay = document.getElementById('coinDisplay');
+      const energyFill = document.getElementById('energyFill');
+      const energyText = document.getElementById('energyText');
+      const toastEl = document.getElementById('toast');
+      const usernameEl = document.getElementById('username');
+      const avatarEl = document.getElementById('avatar');
+      const loginStreakEl = document.getElementById('loginStreak');
+      const refCountEl = document.getElementById('refCount');
+
+      // ===== УСТАНОВКА ДАННЫХ ИГРОКА =====
+      if (usernameEl) usernameEl.textContent = 'Сакура';
+      if (avatarEl) avatarEl.textContent = 'С';
 
     // ===== СОСТОЯНИЕ =====
     let petals = 0;
