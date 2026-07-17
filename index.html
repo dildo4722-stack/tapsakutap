@@ -2978,13 +2978,23 @@ async function deactivatePromo(id, code) {
     }
 }
 
-// ===== АКТИВАЦИЯ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ (ПОЛНАЯ ВЕРСИЯ) =====
-async function activatePromoCode(code) {
+
+// ===== АКТИВАЦИЯ ПРОМОКОДА ПОЛЬЗОВАТЕЛЕМ (ИСПРАВЛЕННАЯ) =====
+async function activatePromoCode(promoCode) {
+    // ИСПОЛЬЗУЕМ переданный параметр promoCode, а НЕ ищем заново!
     var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
     if (!userId) {
         showToast('❌ Ошибка: не удалось определить пользователя');
         return;
     }
+
+    // Проверяем, что код передан
+    if (!promoCode || promoCode.trim() === '') {
+        showToast('❌ Введи промокод');
+        return;
+    }
+
+    var code = promoCode.trim().toUpperCase(); // <-- используем переданный код
 
     try {
         // 1. Проверяем существование промокода
@@ -3023,7 +3033,7 @@ async function activatePromoCode(code) {
         var usedCheck = await supabase
             .from('used_promocodes')
             .select('id')
-            .eq('telegram_id', userId)
+            .eq('telegram_id', String(userId))
             .eq('promo_id', promo.id)
             .maybeSingle();
 
@@ -3037,22 +3047,19 @@ async function activatePromoCode(code) {
         var rewardAmount = 0;
         
         if (promo.reward_type === 'petals') {
-            // Добавляем лепестки
             const amount = promo.reward_amount || 0;
             petals += amount;
             rewardMessage = `+${amount} 🌸 лепестков`;
             rewardAmount = amount;
         } else if (promo.reward_type === 'coins') {
-            // Добавляем монеты
             const amount = promo.reward_amount || 0;
             coins += amount;
             rewardMessage = `+${amount} 🪙 монет`;
             rewardAmount = amount;
         } else if (promo.reward_type === 'multiplier') {
-            // Добавляем множитель
             const mult = promo.multiplier_value || 2;
             tapMultiplier = mult;
-            tapMultiplierExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 часа
+            tapMultiplierExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
             rewardMessage = `x${mult} множитель на 24 часа`;
             rewardAmount = mult;
         } else {
@@ -3075,7 +3082,7 @@ async function activatePromoCode(code) {
                 reward_type: promo.reward_type
             });
 
-        // 8. Обновляем статистику промокодов
+        // 8. Обновляем статистику
         promosUsed = (promosUsed || 0) + 1;
         isDirty = true;
         
@@ -3088,7 +3095,8 @@ async function activatePromoCode(code) {
         showToast(`🎉 Промокод активирован! ${rewardMessage}`);
 
         // 11. Очищаем поле ввода
-        document.getElementById('promoInput').value = '';
+        const promoInput = document.getElementById('promoInput');
+        if (promoInput) promoInput.value = '';
 
     } catch (e) {
         console.error('Ошибка активации промокода:', e);
@@ -3130,11 +3138,19 @@ document.getElementById('broadcastPromoBtn')?.addEventListener('click', async fu
 });
 
 document.getElementById('promoBtn')?.addEventListener('click', function() {
-    var code = document.getElementById('promoInput').value.trim().toUpperCase();
-    if (!code) {
-        showToast('Введи промокод');
+    const input = document.getElementById('promoInput');
+    if (!input) {
+        showToast('❌ Ошибка: поле ввода не найдено');
         return;
     }
+    
+    const code = input.value.trim().toUpperCase();
+    if (!code) {
+        showToast('❌ Введи промокод');
+        return;
+    }
+    
+    console.log('🔑 Активация промокода:', code); // <-- для отладки
     activatePromoCode(code);
 });
 
