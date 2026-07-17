@@ -1596,7 +1596,9 @@ input[type=number] {
     // ===== SUPABASE =====
     const SUPABASE_URL = 'https://imqsosdpeelbhkcufbpx.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltcXNvc2RwZWVsYmhrY3VmYnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxMzc4MzQsImV4cCI6MjA5OTcxMzgzNH0.9VMGH_DJjZCcc0IwEZWqreP92uBz08fLAOI6aQsrcHE';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = window.supabaseClient;
+    
 
 
 
@@ -1695,13 +1697,13 @@ setInterval(updateMultiplierDisplay, 60000);
 // Запускаем проверку каждую минуту
 setInterval(checkMultiplierExpiry, 60000);
 
-    function showToast(msg, ms) {
-      if (!toastEl) return;
-      toastEl.textContent = msg;
-      toastEl.classList.add('show');
-      clearTimeout(showToast._t);
-      showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
-    }
+    window.showToast = function(msg, ms) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
+};
 
     function updateUI() {
       if (petalDisplay) petalDisplay.textContent = formatNumber(petals);
