@@ -441,7 +441,7 @@ input[type=number] {
       .action-label { font-size: 10.5px; }
       .action-btn { padding: 11px 4px 8px; border-radius: 18px; }
     }
-
+    
     .footer-note {
       margin-top: 22px;
       text-align: center;
@@ -450,7 +450,8 @@ input[type=number] {
       letter-spacing: 0.8px;
       color: #b08a8a;
     }
-
+    
+    
     @media (max-width: 420px) {
       .tap-btn { width: 170px; height: 170px; }
       .game-container { padding: 16px 12px 28px; }
@@ -723,21 +724,47 @@ input[type=number] {
       z-index: 5;
     }
 
-    .chest-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .chest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .chest-card {
       text-align: center;
-      padding: 18px 10px;
+      padding: 16px 6px 14px;
       border-radius: 20px;
-      background: rgba(255,255,255,0.04);
+      background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
       border: 1px solid rgba(255,190,190,0.14);
       cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1), border-color 0.15s;
     }
+    .chest-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% -10%, var(--chest-glow, rgba(255,150,180,0.25)), transparent 70%);
+      opacity: 0.8;
+      pointer-events: none;
+    }
+    .chest-card:active { transform: scale(0.95); }
+    .chest-card[data-chest="common"]  { --chest-glow: rgba(255, 130, 170, 0.4); }
+    .chest-card[data-chest="rare"]    { --chest-glow: rgba(255, 190, 80, 0.4); }
+    .chest-card[data-chest="lootbox"] { --chest-glow: rgba(160, 130, 255, 0.45); }
+    .chest-card.locked { opacity: 0.55; }
     .chest-emoji-slot {
-      width: 56px; height: 56px;
+      width: 50px; height: 50px;
       border-radius: 16px;
-      margin: 0 auto 10px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02));
+      box-shadow: 0 4px 14px var(--chest-glow, rgba(0,0,0,0.25)), inset 0 1px 1px rgba(255,255,255,0.25);
     }
+    .chest-name { font-weight: 700; font-size: 12.5px; margin-bottom: 3px; position: relative; z-index: 1; }
+    .chest-price { font-size: 10.5px; color: #cf9f9f; margin-bottom: 10px; position: relative; z-index: 1; line-height: 1.3; }
+    .chest-card .btn { font-size: 11px; padding: 8px 4px; position: relative; z-index: 1; }
 
     .toast {
       position: fixed;
@@ -904,6 +931,18 @@ input[type=number] {
       </svg>
     </div>
     <div class="action-label">Достижения</div>
+  </div>
+</div>
+
+<div class="action-row action-row-admin" id="adminRow" style="display:none;">
+  <div class="action-btn" data-modal="adminModal">
+    <div class="action-icon">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="3" stroke="white" stroke-width="1.6"/>
+        <path d="M19.4 13.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V19.7a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H4.3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H10.5a1.6 1.6 0 0 0 1-1.5V4.3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10.5a1.6 1.6 0 0 0 1.5 1h.1a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" stroke="white" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="action-label">Админ-панель</div>
   </div>
 </div>
 
@@ -1111,19 +1150,50 @@ input[type=number] {
       <div class="modal-handle"></div>
       <div class="modal-close" data-close>✕</div>
       <div class="modal-title">Сундуки</div>
-      <div class="modal-sub">Содержимое и шансы каждого сундука настраивает администратор. Здесь — демо-конфигурация призов-лепестков.</div>
+      <div class="modal-sub">Все призы и шансы для каждого сундука настраивает администратор через базу данных — здесь показаны актуальные значения.</div>
       <div class="chest-grid">
         <div class="chest-card" data-chest="common">
-          <div class="chest-emoji-slot"></div>
-          <div style="font-weight:700;margin-bottom:4px;">Обычный</div>
-          <div style="font-size:12px;color:#cf9f9f;margin-bottom:10px;">Цена: 2 000 🌸</div>
-          <button class="btn secondary" style="padding:8px;font-size:12.5px;">Открыть</button>
+          <div class="chest-emoji-slot">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+              <path d="M12 3c1.2 1.3 1.3 2.9.3 4.2 1.7-.4 3.1.3 3.7 1.8-1.7.1-2.9 1.1-3.2 2.6 1.5-.7 3-.3 4 .9-1.6.8-3.2.6-4.4-.6.4 1.6-.3 3-1.9 3.7-.4-1.5-1.5-2.5-3-2.6-1.5.1-2.6 1.1-3 2.6-1.6-.7-2.3-2.1-1.9-3.7-1.2 1.2-2.8 1.4-4.4.6 1-1.2 2.5-1.6 4-.9-.3-1.5-1.5-2.5-3.2-2.6.6-1.5 2-2.2 3.7-1.8-1-1.3-.9-2.9.3-4.2Z" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="1.5" fill="white"/>
+            </svg>
+          </div>
+          <div class="chest-name">Обычный</div>
+          <div class="chest-price" id="chestPriceCommon">Цена: 1 000 🌸</div>
+          <button class="btn secondary">Открыть</button>
         </div>
         <div class="chest-card" data-chest="rare">
-          <div class="chest-emoji-slot"></div>
-          <div style="font-weight:700;margin-bottom:4px;">Редкий</div>
-          <div style="font-size:12px;color:#cf9f9f;margin-bottom:10px;">Цена: 5 🪙</div>
-          <button class="btn gold" style="padding:8px;font-size:12.5px;">Открыть</button>
+          <div class="chest-emoji-slot">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+              <circle cx="12" cy="12" r="10" fill="url(#goldGrad)" stroke="#FFA000" stroke-width="1"/>
+              <circle cx="12" cy="12" r="7" fill="none" stroke="#FF8F00" stroke-width="1" stroke-dasharray="2 1"/>
+              <path d="M12 7v10M10 9.5c0-.83.67-1.5 1.5-1.5h1c.83 0 1.5.67 1.5 1.5v0c0 .83-.67 1.5-1.5 1.5h-1c-.83 0-1.5.67-1.5 1.5v0c0 .83.67 1.5 1.5 1.5h1c.83 0 1.5-.67 1.5-1.5" stroke="#FF8F00" stroke-width="1.5" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#FFE082" />
+                  <stop offset="50%" stop-color="#FFCA28" />
+                  <stop offset="100%" stop-color="#FFB300" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="chest-name">Редкий</div>
+          <div class="chest-price" id="chestPriceRare">Цена: 5 🪙</div>
+          <button class="btn gold">Открыть</button>
+        </div>
+        <div class="chest-card" data-chest="lootbox">
+          <div class="chest-emoji-slot">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:26px;height:26px;">
+              <rect x="4" y="9.5" width="16" height="10" rx="1.8" stroke="white" stroke-width="1.5"/>
+              <path d="M4 9.5h16v3.4H4z" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M12 9.5v10" stroke="white" stroke-width="1.4"/>
+              <path d="M12 9.5c-1-2.6-3-3.6-4.4-2.7-1.2.8-.9 2.7 1 2.7M12 9.5c1-2.6 3-3.6 4.4-2.7 1.2.8.9 2.7-1 2.7" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="chest-name">Лутбокс</div>
+          <div class="chest-price" id="chestPriceLootbox">Цена: 10 000 🌸</div>
+          <button class="btn secondary">Открыть</button>
         </div>
       </div>
       <div id="chestResult" style="margin-top:14px;text-align:center;font-size:14px;font-weight:700;color:#ffd27a;"></div>
@@ -1446,6 +1516,8 @@ input[type=number] {
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
+
+// Вызываем при загрузке (после loadData)
     // ===== DOM =====
     const tapBtn = document.getElementById('tapButton');
     const petalDisplay = document.getElementById('petalDisplay');
@@ -1464,6 +1536,7 @@ input[type=number] {
     // ===== СОСТОЯНИЕ =====
     let petals = 0;
     let coins = 0;
+    let stars = 0; // валюта наград лутбокса (звёзды); стоимость открытия лутбокса подключим позже
     let energy = 1000;
     const MAX_ENERGY = 1000;
     let tapMultiplier = 1; 
@@ -1581,7 +1654,6 @@ function initTelegramUser() {
         }
         
         // Сохраняем ID пользователя (если нужно)
-        currentUserId = user.id.toString();
         localStorage.setItem('saku_user_id', currentUserId);
       }
     }
@@ -1610,6 +1682,7 @@ initTelegramUser();
         if (user) {
           petals = user.petals ?? 0;
           coins = user.coins ?? 0;
+          stars = user.stars ?? 0;
           energy = user.energy ?? 1000;
           totalTaps = user.total_taps ?? 0;
           tapTaskCount = user.tap_count ?? 0;
@@ -1651,6 +1724,7 @@ initTelegramUser();
         .update({
           petals: petals,
           coins: coins,
+          stars: stars,
           energy: energy,
           total_taps: totalTaps,
           tap_count: tapTaskCount,
@@ -1673,6 +1747,7 @@ initTelegramUser();
           telegram_id: currentUserId,
           petals: petals,
           coins: coins,
+          stars: stars,
           energy: energy,
           total_taps: totalTaps,
           tap_count: tapTaskCount,
@@ -1723,7 +1798,7 @@ const BOT_USERNAME = 'SAKU_TAP_bot';
 function updateRefLink() {
   const userId = currentUserId || '12345';
   const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
-  const input = document.getElementById('refLinkInput');
+  const input = document.getElementById('refLinkText');
   if (input) input.value = refLink;
 }
 
@@ -1748,7 +1823,7 @@ document.getElementById('friendsBtn')?.addEventListener('click', function() {
 
 // Копирование ссылки
 document.getElementById('copyRefBtn')?.addEventListener('click', function() {
-  const input = document.getElementById('refLinkInput');
+  const input = document.getElementById('refLinkText');
   if (input && input.value) {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(input.value).then(() => {
@@ -1978,9 +2053,13 @@ document.getElementById('copyRefBtn')?.addEventListener('click', function() {
     wheelPaidBtn.addEventListener('click', () => spinWheel(false));
 
     // ===== Сундуки =====
+    // Это конфигурация ПО УМОЛЧАНИЮ (fallback), которая используется, если в таблице
+    // Supabase "chest_prizes" ещё нет строк для этого сундука. Как только админ добавит
+    // туда свои призы — они автоматически заменят значения по умолчанию, без правок кода.
+    // Структура строки в chest_prizes: chest_key, label, weight, reward_type ('petals'|'coins'|'stars'|'special'), amount, special_key, active
     const chestPools = {
       common: {
-        cost: 2000, currency: 'petals',
+        cost: 1000, currency: 'petals',
         pool: [
           { label: '100 🌸', weight: 35, apply: () => { petals += 100; } },
           { label: '500 🌸', weight: 30, apply: () => { petals += 500; } },
@@ -1999,6 +2078,24 @@ document.getElementById('copyRefBtn')?.addEventListener('click', function() {
           { label: '1 🪙', weight: 8, apply: () => { coins += 1; } },
           { label: '3 🪙', weight: 2, apply: () => { coins += 3; } },
         ]
+      },
+      // Цена лутбокса — 10 000 🌸. Награды по-прежнему выдаются в звёздах (⭐) — их можно
+      // поменять на любую валюту позже прямо в таблице chest_prizes через админ-панель.
+      lootbox: {
+        cost: 10000, currency: 'petals',
+        pool: [
+          { label: '15 ⭐',    weight: 300, apply: () => { stars += 15; } },
+          { label: '100 ⭐',   weight: 250, apply: () => { stars += 100; } },
+          { label: '500 ⭐',   weight: 200, apply: () => { stars += 500; } },
+          { label: '1 000 ⭐', weight: 120, apply: () => { stars += 1000; } },
+          { label: '2 000 ⭐', weight: 70,  apply: () => { stars += 2000; } },
+          { label: '5 000 ⭐', weight: 40,  apply: () => { stars += 5000; } },
+          { label: '10 000 ⭐',weight: 15,  apply: () => { stars += 10000; } },
+          { label: 'VIP статус',   weight: 3, apply: () => grantSpecialPrize('vip', 'VIP статус') },
+          { label: 'Креатив',      weight: 1, apply: () => grantSpecialPrize('creative', 'Креатив') },
+          { label: 'Аксолотль',    weight: 3, apply: () => grantSpecialPrize('axolotl', 'Аксолотль') },
+          { label: 'Админ',        weight: 1, apply: () => grantSpecialPrize('admin', 'Админ') },
+        ]
       }
     };
 
@@ -2011,13 +2108,75 @@ document.getElementById('copyRefBtn')?.addEventListener('click', function() {
       return list[list.length - 1];
     }
 
+    // Уникальные призы (VIP, Креатив, Аксолотль, Админ и т.п.) нельзя просто зачислить
+    // на баланс — они требуют ручной выдачи. Фиксируем заявку в таблице
+    // special_prize_claims, чтобы админ увидел её и выдал приз вручную.
+    async function grantSpecialPrize(specialKey, label) {
+      showToast(`🎉 Выпал уникальный приз: ${label}! Админ свяжется с тобой для выдачи`);
+      try {
+        await supabase.from('special_prize_claims').insert({
+          telegram_id: currentUserId,
+          special_key: specialKey,
+          label: label,
+          fulfilled: false
+        });
+      } catch (e) {
+        console.error('Не удалось записать заявку на уникальный приз:', e);
+      }
+    }
+
+    function buildRewardApplier(rewardType, amount, specialKey, label) {
+      return () => {
+        if (rewardType === 'petals') petals += amount;
+        else if (rewardType === 'coins') coins += amount;
+        else if (rewardType === 'stars') stars += amount;
+        else if (rewardType === 'special') grantSpecialPrize(specialKey, label);
+      };
+    }
+
+    // Подтягиваем актуальный пул призов сундука из Supabase (админ-панель = таблица
+    // chest_prizes). Если строк нет или запрос не удался — используем значения выше.
+    async function getChestConfig(key) {
+      const fallback = chestPools[key];
+      try {
+        const { data, error } = await supabase
+          .from('chest_prizes')
+          .select('label, weight, reward_type, amount, special_key')
+          .eq('chest_key', key)
+          .eq('active', true);
+
+        if (!error && data && data.length > 0) {
+          return {
+            cost: fallback.cost,
+            currency: fallback.currency,
+            pool: data.map(row => ({
+              label: row.label,
+              weight: row.weight,
+              apply: buildRewardApplier(row.reward_type, row.amount, row.special_key, row.label)
+            }))
+          };
+        }
+      } catch (e) {
+        console.error('Не удалось загрузить призы сундука из БД, использую значения по умолчанию:', e);
+      }
+      return fallback;
+    }
+
     document.querySelectorAll('.chest-card').forEach(card => {
       const key = card.getAttribute('data-chest');
-      card.querySelector('button').addEventListener('click', () => {
-        const cfg = chestPools[key];
-        const balance = cfg.currency === 'coins' ? coins : petals;
+      const btn = card.querySelector('button');
+      if (!btn || btn.disabled) return; // сундук ещё не активирован (например, лутбокс без валюты)
+
+      btn.addEventListener('click', async () => {
+        const cfg = await getChestConfig(key);
+        if (cfg.cost === null || cfg.cost === undefined) { showToast('Для этого сундука ещё не подключена валюта'); return; }
+
+        const balance = cfg.currency === 'coins' ? coins : (cfg.currency === 'stars' ? stars : petals);
         if (balance < cfg.cost) { showToast('Недостаточно средств для этого сундука'); return; }
-        if (cfg.currency === 'coins') coins -= cfg.cost; else petals -= cfg.cost;
+
+        if (cfg.currency === 'coins') coins -= cfg.cost;
+        else if (cfg.currency === 'stars') stars -= cfg.cost;
+        else petals -= cfg.cost;
 
         const totalWeight = cfg.pool.reduce((s, p) => s + p.weight, 0);
         const prize = pickWeighted(cfg.pool, totalWeight);
@@ -2173,64 +2332,238 @@ async function renderLeaderboard(kind) {
     window.addEventListener('pagehide', saveData);
 
     console.log('🌸 SAKU TAP ready (v0.3)');
+    // ===== АДМИН-ПАНЕЛЬ ПРИ ЗАГРУЗКЕ =====
+async function checkAndShowAdmin() {
+    try {
+        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        if (!userId) {
+            console.log('Не удалось получить ID пользователя');
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('users')
+            .select('is_admin')
+            .eq('telegram_id', userId)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Ошибка проверки прав:', error);
+            return;
+        }
+
+        if (data && data.is_admin === true) {
+            // Скрываем игровой интерфейс
+            const gameContainer = document.querySelector('.game-container');
+            if (gameContainer) gameContainer.style.display = 'none';
+            
+            // Открываем админ-панель
+            const adminModal = document.getElementById('adminModal');
+            if (adminModal) {
+                adminModal.classList.add('open');
+                adminModal.style.display = 'flex';
+                adminModal.style.alignItems = 'center';
+                
+                // Добавляем кнопку возврата в игру
+                const sheet = adminModal.querySelector('.modal-sheet');
+                if (sheet && !sheet.querySelector('.back-to-game-btn')) {
+                    const backBtn = document.createElement('button');
+                    backBtn.className = 'btn secondary back-to-game-btn';
+                    backBtn.style.marginTop = '16px';
+                    backBtn.textContent = '🔙 Вернуться в игру';
+                    backBtn.onclick = function() {
+                        if (gameContainer) gameContainer.style.display = 'block';
+                        adminModal.classList.remove('open');
+                        adminModal.style.display = 'none';
+                    };
+                    sheet.appendChild(backBtn);
+                }
+            }
+            
+            console.log('👑 Админ-панель активирована');
+        }
+    } catch (e) {
+        console.error('Ошибка при проверке прав админа:', e);
+    }
+}
+
+// Вызов после загрузки данных
+setTimeout(() => {
+    checkAndShowAdmin();
+}, 500);
   })();
   </script>
   <script>
-  // Инициализируем Telegram Web App
-  const tg = window.Telegram.WebApp;
-  tg.ready();
+  
 
-  // 1. Получаем реальный ID пользователя из Telegram
-  // Если приложение открыто в обычном браузере, используем тестовый ID '000000'
-  const userId = tg.initDataUnsafe?.user?.id || "000000";
-  const botUsername = "Saku_Tap_Bot"; // Убедитесь, что здесь указан юзернейм вашего бота
-  const refLink = `https://t.me/${botUsername}?start=ref_${userId}`;
+ 
+</script>
+<!-- МОДАЛЬНОЕ ОКНО: АДМИН-ПАНЕЛЬ -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal-sheet" style="max-height: 90vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Панель Администратора</div>
+    <div class="modal-sub">Управление системой SAKU TAP</div>
+    <button class="modal-close" id="closeAdminBtn">&times;</button>
 
-  // Находим элементы в HTML
-  const refLinkText = document.getElementById('refLinkText');
-  const copyBtn = document.getElementById('copyRefBtn');
+    <!-- Горизонтальный скролл меню админки -->
+    <div class="tab-row" id="adminTabs">
+      <button class="tab-btn active" data-tab="admin-cases">Кейсы</button>
+      <button class="tab-btn" data-tab="admin-rates">Курс валют</button>
+      <button class="tab-btn" data-tab="admin-promos">Промокоды</button>
+      <button class="tab-btn" data-tab="admin-users">Пользователи</button>
+      <button class="tab-btn" data-tab="admin-requests">Заявки</button>
+    </div>
 
-  // Устанавливаем сформированную ссылку в текстовый блок
-  if (refLinkText) {
-    refLinkText.textContent = refLink;
-  }
+    <!-- Раздел: Кейсы -->
+    <div class="admin-tab-content" id="admin-cases">
+      <div class="card">
+        <label style="display:block; margin-bottom:8px; font-size:13px; color:#cf9f9f;">Содержимое кейса (Шансы в %)</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div>
+            <span style="font-size:12px; color:#ffd27a;">Обычные монеты %</span>
+            <input type="number" class="input" id="caseCommonDrop" value="50" style="margin-top:4px;">
+          </div>
+          <div>
+            <span style="font-size:12px; color:#ff9fb3;">Сакуры %</span>
+            <input type="number" class="input" id="caseRareDrop" value="35" style="margin-top:4px;">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <span style="font-size:12px; color:#c9a3ff;">Секретный Мультипликатор %</span>
+          <input type="number" class="input" id="caseXDrop" value="15" style="margin-top:4px;">
+        </div>
+        <button class="btn" id="saveCaseSettings">Применить для всех</button>
+      </div>
+    </div>
 
-  // 2. Логика копирования ссылки по клику на кнопку
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      // Копируем ссылку в буфер обмена
-      navigator.clipboard.writeText(refLink).then(() => {
-        showToast("Ссылка скопирована в буфер обмена! 🌸");
-      }).catch(err => {
-        // Резервный вариант, если navigator.clipboard заблокирован браузером
-        const tempInput = document.createElement('input');
-        tempInput.value = refLink;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempInput);
-        showToast("Ссылка скопирована! 🌸");
-      });
-    });
-  }
+    <!-- Раздел: Курс Валют -->
+    <div class="admin-tab-content" id="admin-rates" style="display:none;">
+      <div class="card">
+        <label style="display:block; margin-bottom:8px; font-size:13px; color:#cf9f9f;">Обмен Лепестков на Монеты</label>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <input type="number" class="input" id="ratePetals" value="100" style="margin:0; text-align:center;">
+          <span style="color:#ff5f85; font-weight:bold;">&rarr;</span>
+          <input type="number" class="input" id="rateCoins" value="1" style="margin:0; text-align:center;">
+        </div>
+        <button class="btn" id="saveRatesSettings">Обновить курс</button>
+      </div>
+    </div>
 
-  // Функция для отображения всплывающего уведомления (Toast)
-  // В вашем CSS уже есть стили для .toast и .toast.show, мы просто используем их
-  function showToast(message) {
-    let toast = document.querySelector('.toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.className = 'toast';
-      document.body.appendChild(toast);
+    <!-- Раздел: Промокоды -->
+    <div class="admin-tab-content" id="admin-promos" style="display:none;">
+      <div class="card">
+        <input type="text" class="input" id="promoCodeName" placeholder="Код (напр: SAKU2026)">
+        <select class="input" id="promoType" style="background:#1a0b0b; color:#fce1e1;">
+          <option value="coins">На монеты</option>
+          <option value="sakura">На сакуры</option>
+          <option value="x1">Мультипликатор x1</option>
+          <option value="x2">Мультипликатор x2</option>
+          <option value="x3">Мультипликатор x3</option>
+          <option value="x4">Мультипликатор x4</option>
+        </select>
+        <input type="number" class="input" id="promoRewardVal" placeholder="Размер награды (для монет/сакур)">
+        <input type="number" class="input" id="promoUses" placeholder="Количество активаций">
+        
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <button class="btn" id="createPromoBtn">Создать</button>
+          <button class="btn secondary" id="broadcastPromoBtn" style="white-space:nowrap;">Рассылка кода</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Раздел: Пользователи -->
+    <div class="admin-tab-content" id="admin-users" style="display:none;">
+      <div class="card" style="padding:10px;">
+        <input type="text" class="input" id="searchUserInAdmin" placeholder="Поиск по Username / ID" style="margin-bottom:10px;">
+        
+        <!-- Список юзеров (динамический) -->
+        <div id="adminUsersList" style="max-height:250px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <!-- Шаблон юзера -->
+          <div class="user-admin-row" style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+            <div style="display:flex; justify-content:between; align-items:center; justify-content:space-between; margin-bottom:6px;">
+              <span style="font-weight:600; font-size:14px; color:#ffb3c6;">@alex_dev</span>
+              <span style="font-size:11px; opacity:0.5;">ID: 482910</span>
+            </div>
+            <div style="font-size:12px; color:#cf9f9f; margin-bottom:8px;">
+              Баланс: <span style="color:#ffd27a;">5,200</span> монеты | <span style="color:#ff9fb3;">140</span> сакур
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
+              <button class="btn" style="font-size:11px; padding:5px;" onclick="adminGiveBalance(482910)">Выдать</button>
+              <button class="btn secondary" style="font-size:11px; padding:5px; border-color:#ff5f85; color:#ff5f85;" onclick="adminBlockUser(482910, true)">Бан</button>
+              <button class="btn secondary" style="font-size:11px; padding:5px;" onclick="adminBlockUser(482910, false)">Разбан</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Раздел: Заявки -->
+    <div class="admin-tab-content" id="admin-requests" style="display:none;">
+      <div class="card" style="padding:10px;">
+        <div id="adminRequestsList" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <!-- Пример заявки -->
+          <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:600; font-size:13px; color:#f0dada;">Заявка на: Креатив</div>
+              <div style="font-size:12px; opacity:0.6; color:#ff9fb3;">От: @player_one</div>
+            </div>
+            <div style="display:flex; gap:5px;">
+              <button class="btn" style="font-size:11px; padding:6px 10px;" onclick="resolveRequest(1, 'approve')">Одобрить</button>
+              <button class="btn secondary" style="font-size:11px; padding:6px 5px;" onclick="resolveRequest(1, 'decline')">&times;</button>
+            </div>
+          </div>
+          <!-- Пример 2 -->
+          <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:600; font-size:13px; color:#f0dada;">Заявка на: Аксолотль</div>
+              <div style="font-size:12px; opacity:0.6; color:#ff9fb3;">От: @saku_king</div>
+            </div>
+            <div style="display:flex; gap:5px;">
+              <button class="btn" style="font-size:11px; padding:6px 10px;" onclick="resolveRequest(2, 'approve')">Одобрить</button>
+              <button class="btn secondary" style="font-size:11px; padding:6px 5px;" onclick="resolveRequest(2, 'decline')">&times;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<script>
+
+// Открытие админ-панели
+document.querySelector('#adminRow .action-btn')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('adminModal').classList.add('open');
+});
+
+// Закрытие админ-панели
+document.getElementById('closeAdminBtn')?.addEventListener('click', function() {
+    document.getElementById('adminModal').classList.remove('open');
+});
+
+// Закрытие по клику на фон
+document.getElementById('adminModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.classList.remove('open');
     }
-    toast.textContent = message;
-    toast.classList.add('show');
-    
-    // Скрываем уведомление через 2.5 секунды
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, 2500);
-  }
+});
+
+// ===== ТАБЫ В АДМИНКЕ =====
+document.querySelectorAll('#adminTabs .tab-btn').forEach(tab => {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('#adminTabs .tab-btn').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+
+        document.querySelectorAll('.admin-tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
+
+        const target = document.getElementById(this.getAttribute('data-tab'));
+        if (target) target.style.display = 'block';
+    });
+});
 </script>
 </body>
 </html>
