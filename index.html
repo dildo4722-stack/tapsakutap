@@ -1999,8 +1999,6 @@ function completeQuest() {
 
     function handleTap(e) {
     if (e) e.preventDefault();
-    
-    // Проверяем энергию
     if (energy < 1) {
         if (tapBtn) {
             tapBtn.style.transform = 'scale(0.85)';
@@ -2008,28 +2006,8 @@ function completeQuest() {
         }
         return;
     }
-    
-    // ===== ПРОВЕРЯЕМ МНОЖИТЕЛЬ =====
-    // Получаем множитель из localStorage
-    let currentMultiplier = parseInt(localStorage.getItem('saku_tapMultiplier')) || 1;
-    let expiresAt = parseInt(localStorage.getItem('saku_tapMultiplierExpiresAt')) || 0;
-    
-    // Проверяем, не истёк ли множитель
-    if (Date.now() > expiresAt && expiresAt > 0) {
-        // Множитель истёк - сбрасываем
-        localStorage.setItem('saku_tapMultiplier', '1');
-        localStorage.setItem('saku_tapMultiplierExpiresAt', '0');
-        currentMultiplier = 1;
-        tapMultiplier = 1;
-        tapMultiplierExpiresAt = 0;
-        showToast('⏰ Множитель истек!');
-    }
-    
-    // Применяем множитель
-    const multiplier = currentMultiplier || 1;
-    
     energy -= 1;
-    petals += multiplier; // <-- используем множитель!
+    petals += tapMultiplier;
     totalTaps += 1;
     tapTaskCount += 1;
     isDirty = true;
