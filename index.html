@@ -1741,6 +1741,11 @@ input[type=number] {
     // ===== СОСТОЯНИЕ =====
     let currentUsername = '';
     let currentFirstName = '';
+    // Telegram отдаёт photo_url далеко не всегда (это ограничение самого
+    // Telegram Mini Apps в зависимости от настроек приватности пользователя,
+    // а не баг приложения) — если его нет, весь код ниже просто оставляет
+    // круглую заглушку с первой буквой имени, что и является ожидаемым поведением.
+    let currentPhotoUrl = '';
     let petals = 0;
     let coins = 0;
     let stars = 0; // валюта наград лутбокса (звёзды); стоимость открытия лутбокса подключим позже
@@ -1896,6 +1901,7 @@ function initTelegramUser() {
       if (user) {
         currentUsername = user.username || '';
         currentFirstName = user.first_name || '';
+        currentPhotoUrl = user.photo_url || '';
 
         // Устанавливаем отображаемое имя: приоритет — ник (first_name),
         // а не @username
@@ -1932,8 +1938,46 @@ function initTelegramUser() {
   }
 }
 
+// ===== СИНХРОНИЗАЦИЯ ПРОФИЛЯ (имя/ник/аватар) =====
+// Раньше username/first_name писались в базу только внутри saveData(),
+// а та выполняется лишь если isDirty === true (то есть игрок уже что-то
+// натапал). Из-за этого у игроков, которые просто открыли приложение и
+// посмотрели топ/админку, ник в базе оставался пустым — отсюда и
+// "Игрок #1234" в топе. Эта функция обновляет профиль отдельно от
+// игровых данных и вызывается при каждом заходе в приложение.
+async function syncUserProfile() {
+  if (!currentUserId) return;
+  try {
+    const payload = {
+      telegram_id: currentUserId,
+      username: currentUsername || null,
+      first_name: currentFirstName || null,
+      last_login: new Date()
+    };
+    if (currentPhotoUrl) payload.avatar_url = currentPhotoUrl;
+    const { error } = await supabase
+      .from('users')
+      .upsert(payload, { onConflict: 'telegram_id' });
+    if (error) {
+      // Если в таблице ещё нет колонки avatar_url — не наша логика виновата,
+      // а отсутствующая миграция; пробуем ещё раз без неё, чтобы хотя бы
+      // ник/имя сохранились.
+      if (payload.avatar_url && String(error.message || '').includes('avatar_url')) {
+        delete payload.avatar_url;
+        const retry = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' });
+        if (retry.error) console.error('Не удалось синхронизировать профиль:', retry.error);
+      } else {
+        console.error('Не удалось синхронизировать профиль:', error);
+      }
+    }
+  } catch (e) {
+    console.error('Критическая ошибка синхронизации профиля:', e);
+  }
+}
+
 // Вызываем при загрузке
 initTelegramUser();
+syncUserProfile();
 loadExchangeRate();
 
 async function loadData() {
@@ -2848,7 +2892,7 @@ async function renderLeaderboard(kind) {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('telegram_id, username, first_name, petals, coins')
+      .select('telegram_id, username, first_name, petals, coins, avatar_url')
       .order(column, { ascending: false })
       .limit(10);
 
@@ -2864,10 +2908,16 @@ async function renderLeaderboard(kind) {
       const rawName = row.first_name || (row.username ? '@' + row.username : `Игрок #${String(row.telegram_id).slice(-4)}`);
       const name = isMe ? 'Ты' : (typeof escapeHtml === 'function' ? escapeHtml(rawName) : rawName);
       const val = kind === 'coins' ? (row.coins ?? 0) : (row.petals ?? 0);
+      const letter = (rawName || 'S').replace('@', '')[0].toUpperCase();
+      const avatarHtml = row.avatar_url
+        ? `<img src="${row.avatar_url}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+           <span style="display:none;width:22px;height:22px;border-radius:50%;background:rgba(255,159,179,0.25);align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fce1e1;flex-shrink:0;">${letter}</span>`
+        : `<span style="display:flex;width:22px;height:22px;border-radius:50%;background:rgba(255,159,179,0.25);align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fce1e1;flex-shrink:0;">${letter}</span>`;
       const rowEl = document.createElement('div');
       rowEl.className = 'leader-row';
       rowEl.innerHTML = `
         <span class="leader-rank">${i + 1}</span>
+        ${avatarHtml}
         <span class="leader-name">${name}</span>
         <span class="leader-val">${formatNumber(val)} ${kind === 'coins' ? '🪙' : '🌸'}</span>
       `;
@@ -3154,58 +3204,12 @@ setInterval(restoreEnergy, 3000);
 
     checkBlockedAndInit();
     // ===== АДМИН-ПАНЕЛЬ ПРИ ЗАГРУЗКЕ =====
+    // Раньше эта функция принудительно скрывала игру и открывала админ-модалку
+    // поверх всего при каждом заходе админа — теперь вместо этого просто
+    // показываем постоянную кнопку "Админ-панель" в списке действий
+    // (см. initAdminPanel/adminRow), которая всегда на месте и открывается по тапу.
 async function checkAndShowAdmin() {
-    try {
-        const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-        if (!userId) {
-            console.log('Не удалось получить ID пользователя');
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from('users')
-            .select('is_admin')
-            .eq('telegram_id', userId)
-            .maybeSingle();
-
-        if (error) {
-            console.error('Ошибка проверки прав:', error);
-            return;
-        }
-
-        if (data && data.is_admin === true) {
-            // Скрываем игровой интерфейс
-            const gameContainer = document.querySelector('.game-container');
-            if (gameContainer) gameContainer.style.display = 'none';
-            
-            // Открываем админ-панель
-            const adminModal = document.getElementById('adminModal');
-            if (adminModal) {
-                adminModal.classList.add('open');
-                adminModal.style.display = 'flex';
-                adminModal.style.alignItems = 'center';
-                
-                // Добавляем кнопку возврата в игру
-                const sheet = adminModal.querySelector('.modal-sheet');
-                if (sheet && !sheet.querySelector('.back-to-game-btn')) {
-                    const backBtn = document.createElement('button');
-                    backBtn.className = 'btn secondary back-to-game-btn';
-                    backBtn.style.marginTop = '16px';
-                    backBtn.textContent = '🔙 Вернуться в игру';
-                    backBtn.onclick = function() {
-                        if (gameContainer) gameContainer.style.display = 'block';
-                        adminModal.classList.remove('open');
-                        adminModal.style.display = 'none';
-                    };
-                    sheet.appendChild(backBtn);
-                }
-            }
-            
-            console.log('👑 Админ-панель активирована');
-        }
-    } catch (e) {
-        console.error('Ошибка при проверке прав админа:', e);
-    }
+    await initAdminPanel();
 }
 
 // Вызов после загрузки данных
@@ -3233,7 +3237,7 @@ setTimeout(() => {
       <button class="tab-btn" data-tab="admin-rates">Курс валют</button>
       <button class="tab-btn" data-tab="admin-promos">Промокоды</button>
       <button class="tab-btn" data-tab="admin-users">Пользователи</button>
-      <button class="tab-btn" data-tab="admin-requests">Заявки</button>
+      <button class="tab-btn" data-tab="admin-requests">Заявки<span id="requestsBadge" style="display:none; margin-left:5px; background:#ff5f85; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px;"></span></button>
     </div>
 
    <!-- Раздел: Кейсы -->
@@ -3402,6 +3406,9 @@ setTimeout(() => {
 document.querySelector('#adminRow .action-btn')?.addEventListener('click', function(e) {
     e.preventDefault();
     document.getElementById('adminModal').classList.add('open');
+    // Обновляем счётчик заявок сразу при входе в панель, не дожидаясь,
+    // пока админ сам догадается открыть вкладку "Заявки".
+    loadRequests();
 });
 
 // Закрытие админ-панели
@@ -3550,14 +3557,36 @@ async function loadRequests() {
   if (!container) return;
   
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('special_prize_claims')
       .select('*')
       .eq('fulfilled', false)
       .order('created_at', { ascending: false });
-    
+
+    if (error) {
+      // Если сортировка по created_at упала (например, в таблице нет такой
+      // колонки) — не теряем все заявки из-за этого, читаем без сортировки.
+      console.warn('Не удалось отсортировать заявки по created_at, пробую без сортировки:', error);
+      const retry = await supabase
+        .from('special_prize_claims')
+        .select('*')
+        .eq('fulfilled', false);
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) throw error;
-    
+
+    const badge = document.getElementById('requestsBadge');
+    if (badge) {
+      if (data && data.length > 0) {
+        badge.textContent = data.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
     if (!data || data.length === 0) {
       container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:10px;">Нет активных заявок</div>';
       return;
@@ -3853,7 +3882,7 @@ async function loadAdminUsersList(search) {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('telegram_id, username, first_name, petals, coins, is_blocked')
+            .select('telegram_id, username, first_name, petals, coins, is_blocked, avatar_url')
             .order('telegram_id', { ascending: true })
             .limit(500);
 
@@ -3897,13 +3926,21 @@ function renderAdminUserCard(u) {
     const blocked = !!u.is_blocked;
     const petalsVal = (u.petals ?? 0).toLocaleString('ru-RU');
     const coinsVal = (u.coins ?? 0).toLocaleString('ru-RU');
+    const letter = (u.first_name || u.username || 'S')[0].toUpperCase();
+    const avatarHtml = u.avatar_url
+      ? `<img src="${u.avatar_url}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <span style="display:none;width:32px;height:32px;border-radius:50%;background:rgba(255,159,179,0.25);align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fce1e1;flex-shrink:0;">${letter}</span>`
+      : `<span style="display:flex;width:32px;height:32px;border-radius:50%;background:rgba(255,159,179,0.25);align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fce1e1;flex-shrink:0;">${letter}</span>`;
 
     return `
     <div class="admin-user-card" style="background:rgba(0,0,0,0.22); border:1px solid ${blocked ? 'rgba(255,95,133,0.35)' : 'rgba(255,255,255,0.06)'}; border-radius:16px; padding:12px 14px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;">
-        <div style="min-width:0;">
-          <div style="font-weight:700; font-size:14px; color:#fce1e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
-          <div style="font-size:11.5px; color:#cf9f9f; margin-top:1px;">${usernameLine}</div>
+        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+          ${avatarHtml}
+          <div style="min-width:0;">
+            <div style="font-weight:700; font-size:14px; color:#fce1e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
+            <div style="font-size:11.5px; color:#cf9f9f; margin-top:1px;">${usernameLine}</div>
+          </div>
         </div>
         <div style="text-align:right; flex-shrink:0;">
           <div style="font-size:10.5px; color:rgba(255,255,255,0.35); letter-spacing:0.3px;">ID</div>
