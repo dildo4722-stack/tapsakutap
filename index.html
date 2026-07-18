@@ -3939,6 +3939,75 @@ if (oldBtn) {
     });
 }
 
+  // ДОБАВЬТЕ ЭТОТ КОД В КОНЕЦ ВАШЕГО СКРИПТА
+// ============================================
+
+// 1. Автоматическая загрузка кейсов при открытии вкладки "Кейсы"
+document.addEventListener('DOMContentLoaded', function() {
+    // Находим кнопку "Кейсы" в админ-панели
+    const casesTab = document.querySelector('#adminTabs .tab-btn[data-tab="admin-cases"]');
+    if (casesTab) {
+        casesTab.addEventListener('click', function() {
+            setTimeout(() => {
+                const select = document.getElementById('adminChestSelect');
+                if (select) {
+                    currentChestKey = select.value;
+                    loadChestPrizes(currentChestKey);
+                }
+            }, 100);
+        });
+    }
+
+    // 2. Автоматическая загрузка при первом открытии админ-панели
+    const adminModal = document.getElementById('adminModal');
+    if (adminModal) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    if (adminModal.classList.contains('open')) {
+                        // Активируем первую вкладку (Кейсы)
+                        const firstTab = document.querySelector('#adminTabs .tab-btn');
+                        if (firstTab) {
+                            firstTab.click();
+                        }
+                    }
+                }
+            });
+        });
+        observer.observe(adminModal, { attributes: true });
+    }
+
+    // 3. Проверка работы функций
+    console.log('✅ loadChestPrizes доступна:', typeof loadChestPrizes === 'function');
+    console.log('✅ renderPrizeList доступна:', typeof renderPrizeList === 'function');
+});
+
+// 4. Если кнопка "Загрузить" не работает - принудительно привязываем
+document.getElementById('loadChestBtn')?.addEventListener('click', function() {
+    const select = document.getElementById('adminChestSelect');
+    if (select) {
+        currentChestKey = select.value;
+        loadChestPrizes(currentChestKey);
+        document.getElementById('chestAdminResult').textContent = '🔄 Загрузка...';
+        document.getElementById('chestAdminResult').style.color = '#ffd27a';
+    }
+});
+
+// 5. Отладка - проверить, что данные загружаются
+window.debugChest = async function() {
+    const { data, error } = await supabase
+        .from('chest_prizes')
+        .select('*')
+        .eq('chest_key', 'common')
+        .eq('active', true);
+    
+    console.log('📦 Призы для common:', data);
+    console.log('❌ Ошибка:', error);
+    return data;
+};
+
+// Вызовите в консоли: debugChest()
+
 // ===== ВЫЗОВ ПРИ ЗАГРУЗКЕ =====
 setTimeout(function() {
     initAdminPanel();
