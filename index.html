@@ -2531,6 +2531,82 @@ async function renderLeaderboard(kind) {
       tabRow.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
     });
 
+    // ===== АКТИВАЦИЯ ПРОМОКОДА (ВНУТРИ IIFE) =====
+async function activatePromoCode(promoCode) {
+    if (!promoCode || promoCode.trim() === '') {
+        showToast('❌ Введи промокод');
+        return;
+    }
+
+    const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
+    const code = promoCode.trim().toUpperCase();
+
+    try {
+        const { data: promo, error } = await supabase
+            .from('promocodes')
+            .select('*')
+            .eq('code', code)
+            .maybeSingle();
+
+        if (error || !promo) {
+            showToast('❌ Промокод не найден');
+            return;
+        }
+
+        if (!promo.active) { showToast('❌ Промокод неактивен'); return; }
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+            showToast('❌ Срок действия истек');
+            return;
+        }
+        if (promo.used_count >= promo.uses_limit) {
+            showToast('❌ Промокод уже использован');
+            return;
+        }
+
+        // Применяем награду
+        if (promo.reward_type === 'petals') {
+            petals += promo.reward_amount;
+            showToast(`🎉 +${promo.reward_amount} 🌸 лепестков!`);
+        } else if (promo.reward_type === 'coins') {
+            coins += promo.reward_amount;
+            showToast(`🎉 +${promo.reward_amount} 🪙 монет!`);
+        } else if (promo.reward_type === 'multiplier') {
+            const mult = promo.multiplier_value || 2;
+            const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+            tapMultiplier = mult;
+            tapMultiplierExpiresAt = expiresAt;
+            localStorage.setItem('saku_tapMultiplier', mult);
+            localStorage.setItem('saku_tapMultiplierExpiresAt', expiresAt);
+            showToast(`🎉 x${mult} множитель на 24 часа!`);
+        }
+
+        // ✅ Теперь updateUI доступна!
+        updateUI();
+        updateAchievements();
+
+        await supabase
+            .from('promocodes')
+            .update({ used_count: promo.used_count + 1 })
+            .eq('id', promo.id);
+
+        promosUsed += 1;
+
+        const promoInput = document.getElementById('promoInput');
+        if (promoInput) promoInput.value = '';
+
+        // Сохраняем изменения
+        isDirty = true;
+        saveData();
+
+    } catch (e) {
+        console.error('❌ Ошибка активации:', e);
+        showToast('❌ Ошибка при активации промокода');
+    }
+}
+
+// Делаем функцию доступной глобально
+window.activatePromoCode = activatePromoCode;
+
     // ===== ПРИВЯЗКА ТАПА К КНОПКЕ (ИСПРАВЛЕНИЕ) =====
     if (tapBtn) {
       tapBtn.addEventListener('click', handleTap);
@@ -2545,6 +2621,7 @@ async function renderLeaderboard(kind) {
     window.addEventListener('pagehide', saveData);
 
     console.log('🌸 SAKU TAP ready (v0.3)');
+
     // ===== АДМИН-ПАНЕЛЬ ПРИ ЗАГРУЗКЕ =====
 async function checkAndShowAdmin() {
     try {
@@ -3033,81 +3110,6 @@ async function deactivatePromo(id, code) {
 }
 
 
-// Исправленная функция
-async function activatePromoCode(promoCode) {
-    if (!promoCode || promoCode.trim() === '') {
-        showToast('❌ Введи промокод');
-        return;
-    }
-
-    const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
-    const code = promoCode.trim().toUpperCase();
-
-    try {
-        // Проверяем промокод в Supabase
-        const { data: promo, error } = await window.supabaseClient
-            .from('promocodes')
-            .select('*')
-            .eq('code', code)
-            .maybeSingle();
-
-        if (error || !promo) {
-            showToast('❌ Промокод не найден');
-            return;
-        }
-
-        // Проверки валидности
-        if (!promo.active) { showToast('❌ Промокод неактивен'); return; }
-        if (promo.expires_at && new Date(promo.expires_at) < new Date()) { showToast('❌ Срок действия истек'); return; }
-        if (promo.used_count >= promo.uses_limit) { showToast('❌ Промокод уже использован'); return; }
-
-        // --- ПРИМЕНЯЕМ НАГРАДУ, РАБОТАЯ С ПЕРЕМЕННЫМИ ---
-        if (promo.reward_type === 'petals') {
-            // ИЗМЕНЕНО: Работаем с переменной petals, а НЕ с DOM
-            petals += promo.reward_amount;
-            showToast(`🎉 +${promo.reward_amount} 🌸 лепестков!`);
-        } else if (promo.reward_type === 'coins') {
-            // ИЗМЕНЕНО: Работаем с переменной coins
-            coins += promo.reward_amount;
-            showToast(`🎉 +${promo.reward_amount} 🪙 монет!`);
-        } else if (promo.reward_type === 'multiplier') {
-            const mult = promo.multiplier_value || 2;
-            const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-            // Обновляем глобальные переменные и localStorage
-            window.tapMultiplier = mult;
-            window.tapMultiplierExpiresAt = expiresAt;
-            localStorage.setItem('saku_tapMultiplier', mult);
-            localStorage.setItem('saku_tapMultiplierExpiresAt', expiresAt);
-            showToast(`🎉 x${mult} множитель на 24 часа!`);
-        }
-
-        // ОБНОВЛЯЕМ UI ОДИН РАЗ
-        updateUI();
-        updateAchievements();
-
-        // Увеличиваем счетчик использований в БД
-        await window.supabaseClient
-            .from('promocodes')
-            .update({ used_count: promo.used_count + 1 })
-            .eq('id', promo.id);
-
-        // Увеличиваем счетчик промокодов для достижений
-        if (typeof promosUsed !== 'undefined') {
-            promosUsed += 1;
-        } else {
-            // Если переменная не объявлена глобально, создаем её
-            window.promosUsed = (window.promosUsed || 0) + 1;
-        }
-        
-        // Очищаем поле ввода
-        const promoInput = document.getElementById('promoInput');
-        if (promoInput) promoInput.value = '';
-
-    } catch (e) {
-        console.error('❌ Ошибка активации:', e);
-        showToast('❌ Ошибка при активации промокода');
-    }
-}
   
 // ===== ИНИЦИАЛИЗАЦИЯ АДМИН-ПАНЕЛИ =====
 async function initAdminPanel() {
