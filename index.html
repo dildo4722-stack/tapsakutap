@@ -1798,6 +1798,18 @@ function initTelegramUser() {
 // Вызываем при загрузке
 initTelegramUser();
 
+// ===== ВОССТАНОВЛЕНИЕ ЭНЕРГИИ =====
+function restoreEnergy() {
+    if (energy < MAX_ENERGY) {
+        energy = Math.min(energy + 1, MAX_ENERGY);
+        updateUI();
+        isDirty = true;
+    }
+}
+
+// Восстанавливаем 1 единицу энергии каждые 3 секунды
+setInterval(restoreEnergy, 3000);
+
 async function loadData() {
     try {
         const { data: user, error } = await supabase
@@ -1930,12 +1942,11 @@ async function loadData() {
 // Замените "YOUR_BOT_USERNAME" на юзернейм вашего бота (без @)
 const BOT_USERNAME = 'SAKU_TAP_bot';
 
-// Функция для обновления реферальной ссылки
 function updateRefLink() {
   const userId = currentUserId || '12345';
   const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
-  const input = document.getElementById('refLinkText');
-  if (input) input.value = refLink;
+  const el = document.getElementById('refLinkText');
+  if (el) el.textContent = refLink; // ✅ Используем textContent
 }
 
 // Функция для обновления статистики рефералов
@@ -1957,26 +1968,34 @@ document.getElementById('friendsBtn')?.addEventListener('click', function() {
   document.getElementById('refModal').classList.add('open');
 });
 
-// Копирование ссылки
 document.getElementById('copyRefBtn')?.addEventListener('click', function() {
-  const input = document.getElementById('refLinkText');
-  if (input && input.value) {
+  const el = document.getElementById('refLinkText');
+  if (el) {
+    const text = el.textContent; // ✅ Берем текст из div
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(input.value).then(() => {
+      navigator.clipboard.writeText(text).then(() => {
         showToast('✅ Ссылка скопирована!');
       }).catch(() => {
-        // fallback
-        input.select();
+        // Fallback для старых браузеров
+        const temp = document.createElement('input');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
         document.execCommand('copy');
+        temp.remove();
         showToast('✅ Ссылка скопирована!');
       });
     } else {
-      input.select();
+      const temp = document.createElement('input');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
       document.execCommand('copy');
+      temp.remove();
       showToast('✅ Ссылка скопирована!');
     }
   }
-}); 
+});
     // ===== Ежедневное задание: автоначисление награды =====
     function checkTapTask() {
       if (!tapTaskClaimed && tapTaskCount >= TAP_TASK_GOAL) {
@@ -2511,6 +2530,12 @@ async function renderLeaderboard(kind) {
       tabRow.addEventListener('touchend', handleEnd);
       tabRow.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
     });
+
+    // ===== ПРИВЯЗКА ТАПА К КНОПКЕ (ИСПРАВЛЕНИЕ) =====
+    if (tapBtn) {
+      tapBtn.addEventListener('click', handleTap);
+      tapBtn.addEventListener('touchstart', handleTap, { passive: false });
+    }
 
     // ===== СТАРТ =====
     loadData();
