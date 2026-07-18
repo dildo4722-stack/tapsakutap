@@ -2340,6 +2340,10 @@ function removePrize(index) {
     renderPrizeList(currentChestPrizes);
   }
 }
+    window.loadChestPrizes = loadChestPrizes;
+    window.renderPrizeList = renderPrizeList;
+    window.updatePrizeWeight = updatePrizeWeight;
+    window.removePrize = removePrize;
 
 // Добавление приза
 document.getElementById('addPrizeBtn')?.addEventListener('click', function() {
