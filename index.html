@@ -1659,23 +1659,63 @@ let promosUsed = 0;                // использованные промок�
       return n.toString();
     }
 
+
+      // ===== ПРОВЕРКА МНОЖИТЕЛЯ ПРИ ЗАГРУЗКЕ =====
+function checkMultiplierOnLoad() {
+    const expiresAt = parseInt(localStorage.getItem('saku_tapMultiplierExpiresAt')) || 0;
+    const mult = parseInt(localStorage.getItem('saku_tapMultiplier')) || 1;
     
+    if (Date.now() > expiresAt && expiresAt > 0) {
+        // Множитель истёк
+        localStorage.setItem('saku_tapMultiplier', '1');
+        localStorage.setItem('saku_tapMultiplierExpiresAt', '0');
+        tapMultiplier = 1;
+        tapMultiplierExpiresAt = 0;
+        
+        const multiplierDisplay = document.getElementById('multiplierDisplay');
+        if (multiplierDisplay) {
+            multiplierDisplay.textContent = 'x1';
+        }
+        
+        console.log('⏰ Множитель истек при загрузке');
+    } else if (mult > 1) {
+        // Множитель активен
+        tapMultiplier = mult;
+        tapMultiplierExpiresAt = expiresAt;
+        
+        const multiplierDisplay = document.getElementById('multiplierDisplay');
+        if (multiplierDisplay) {
+            const hoursLeft = Math.floor((expiresAt - Date.now()) / (60 * 60 * 1000));
+            const minutesLeft = Math.floor(((expiresAt - Date.now()) % (60 * 60 * 1000)) / (60 * 1000));
+            multiplierDisplay.textContent = `x${mult} (${hoursLeft}ч ${minutesLeft}мин)`;
+        }
+        
+        console.log('✅ Множитель активен: x' + mult);
+    }
+}
+
+// Вызываем при загрузке
+setTimeout(checkMultiplierOnLoad, 500);
     
     function updateMultiplierDisplay() {
-  const el = document.getElementById('multiplierDisplay');
-  if (!el) return;
-  
-  const now = Date.now();
-  const remaining = tapMultiplierExpiresAt - now;
-  
-  if (tapMultiplier <= 1 || remaining <= 0) {
-    el.textContent = 'x1';
-    return;
-  }
-  
-  const hours = Math.floor(remaining / (60 * 60 * 1000));
-  const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-  el.textContent = `x${tapMultiplier} (${hours}ч ${minutes}мин)`;
+    const el = document.getElementById('multiplierDisplay');
+    if (!el) return;
+    
+    // Проверяем localStorage
+    let mult = parseInt(localStorage.getItem('saku_tapMultiplier')) || 1;
+    let expiresAt = parseInt(localStorage.getItem('saku_tapMultiplierExpiresAt')) || 0;
+    
+    const now = Date.now();
+    const remaining = expiresAt - now;
+    
+    if (mult <= 1 || remaining <= 0) {
+        el.textContent = 'x1';
+        return;
+    }
+    
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    el.textContent = `x${mult} (${hours}ч ${minutes}мин)`;
 }
 
 // Обновляем каждую минуту
@@ -1758,41 +1798,44 @@ function initTelegramUser() {
 // Вызываем при загрузке
 initTelegramUser();
 
-    // ===== БАЗА ДАННЫХ =====
-    async function loadData() {
-      try {
+async function loadData() {
+    try {
         const { data: user, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('telegram_id', currentUserId)
-          .maybeSingle();
+            .from('users')
+            .select('*')
+            .eq('telegram_id', currentUserId)
+            .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
-          console.error("Ошибка загрузки данных:", error);
-          return;
+            console.error("Ошибка загрузки данных:", error);
+            return;
         }
 
         if (user) {
-          petals = user.petals ?? 0;
-          coins = user.coins ?? 0;
-          stars = user.stars ?? 0;
-          energy = user.energy ?? 1000;
-          totalTaps = user.total_taps ?? 0;
-          tapTaskCount = user.tap_count ?? 0;
-          tapTaskClaimed = !!user.tap_task_claimed;
-          loginStreak = user.login_streak ?? 1;
-          refCount = user.ref_count ?? 0;
-          totalExchangesCount = user.total_exchanges ?? 0;
-          tapMultiplier = user.tap_multiplier ?? 1;
-          tapMultiplierExpiresAt = user.tap_multiplier_expires_at ?? 0;
-          wheelFreeAvailableAt = user.wheel_free_available_at ?? 0;
+            petals = user.petals ?? 0;
+            coins = user.coins ?? 0;
+            stars = user.stars ?? 0;
+            energy = user.energy ?? 1000;
+            totalTaps = user.total_taps ?? 0;
+            tapTaskCount = user.tap_count ?? 0;
+            tapTaskClaimed = !!user.tap_task_claimed;
+            loginStreak = user.login_streak ?? 1;
+            refCount = user.ref_count ?? 0;
+            totalExchangesCount = user.total_exchanges ?? 0;
+            tapMultiplier = user.tap_multiplier ?? 1;
+            tapMultiplierExpiresAt = user.tap_multiplier_expires_at ?? 0;
+            wheelFreeAvailableAt = user.wheel_free_available_at ?? 0;
         }
+        
+        // Проверяем множитель из localStorage (приоритет)
+        checkMultiplierOnLoad();
+        
         updateUI();
         updateAchievements();
-      } catch (e) {
+    } catch (e) {
         console.error("Критическая ошибка загрузки:", e);
-      }
     }
+}
 
     async function saveData() {
   if (!isDirty) return;
@@ -1955,39 +1998,46 @@ function completeQuest() {
 }
 
     function handleTap(e) {
-      if (e) e.preventDefault();
-      if (energy < 1) {
+    if (e) e.preventDefault();
+    if (energy < 1) {
         if (tapBtn) {
-          tapBtn.style.transform = 'scale(0.85)';
-          setTimeout(() => tapBtn.style.transform = '', 100);
+            tapBtn.style.transform = 'scale(0.85)';
+            setTimeout(() => tapBtn.style.transform = '', 100);
         }
         return;
-      }
-      energy -= 1;
-      petals += tapMultiplier; // сколько сакур даёт тап, зависит от текущего множителя (колесо)
-      totalTaps += 1;
-      tapTaskCount += 1;
-      isDirty = true;
-
-      spawnSakura();
-      updateUI();
-      checkTapTask();
-      updateAchievements();
-      if (navigator.vibrate) navigator.vibrate(8);
     }
-
-    if (tapBtn) {
-      tapBtn.addEventListener('click', handleTap);
-      tapBtn.addEventListener('touchstart', function(e) { e.preventDefault(); handleTap(e); }, { passive: false });
+    
+    // ===== ПРОВЕРЯЕМ МНОЖИТЕЛЬ =====
+    // Получаем множитель из localStorage
+    let currentMultiplier = parseInt(localStorage.getItem('saku_tapMultiplier')) || 1;
+    let expiresAt = parseInt(localStorage.getItem('saku_tapMultiplierExpiresAt')) || 0;
+    
+    // Проверяем, не истёк ли множитель
+    if (Date.now() > expiresAt && expiresAt > 0) {
+        // Множитель истёк - сбрасываем
+        localStorage.setItem('saku_tapMultiplier', '1');
+        localStorage.setItem('saku_tapMultiplierExpiresAt', '0');
+        currentMultiplier = 1;
+        tapMultiplier = 1;
+        tapMultiplierExpiresAt = 0;
+        showToast('⏰ Множитель истек!');
     }
+    
+    // Применяем множитель
+    const multiplier = currentMultiplier || 1;
+    
+    energy -= 1;
+    petals += multiplier; // <-- используем множитель!
+    totalTaps += 1;
+    tapTaskCount += 1;
+    isDirty = true;
 
-    setInterval(() => {
-      if (energy < MAX_ENERGY) {
-        energy = Math.min(energy + 1, MAX_ENERGY);
-        isDirty = true;
-        updateUI();
-      }
-    }, 3000);
+    spawnSakura();
+    updateUI();
+    checkTapTask();
+    updateAchievements();
+    if (navigator.vibrate) navigator.vibrate(8);
+}
 
     // ===== МОДАЛКИ =====
     document.querySelectorAll('[data-modal]').forEach(btn => {
@@ -3072,10 +3122,26 @@ async function activatePromoCode(promoCode) {
             rewardMessage = `+${rewardAmount} 🪙 монет`;
             
         } else if (promo.reward_type === 'multiplier') {
-            const mult = promo.multiplier_value || 2;
-            localStorage.setItem('saku_tapMultiplier', mult);
-            localStorage.setItem('saku_tapMultiplierExpiresAt', Date.now() + 24 * 60 * 60 * 1000);
-            rewardMessage = `x${mult} множитель на 24 часа`;
+    const mult = promo.multiplier_value || 2;
+    const now = Date.now();
+    const expiresAt = now + (24 * 60 * 60 * 1000); // ровно 24 часа
+    
+    // Сохраняем в localStorage
+    localStorage.setItem('saku_tapMultiplier', mult);
+    localStorage.setItem('saku_tapMultiplierExpiresAt', expiresAt);
+    
+    // Обновляем глобальные переменные
+    tapMultiplier = mult;
+    tapMultiplierExpiresAt = expiresAt;
+    
+    // Обновляем отображение
+    const multiplierDisplay = document.getElementById('multiplierDisplay');
+    if (multiplierDisplay) {
+        multiplierDisplay.textContent = `x${mult}`;
+    }
+    
+    showToast(`🎉 x${mult} множитель на 24 часа! (до ${new Date(expiresAt).toLocaleTimeString()})`);
+}
             
         } else {
             showToast('❌ Неизвестный тип награды');
