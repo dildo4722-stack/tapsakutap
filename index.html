@@ -1948,28 +1948,40 @@ function initTelegramUser() {
 async function syncUserProfile() {
   if (!currentUserId) return;
   try {
-    const payload = {
-      telegram_id: currentUserId,
+    const basePayload = {
       username: currentUsername || null,
       first_name: currentFirstName || null,
       last_login: new Date()
     };
-    if (currentPhotoUrl) payload.avatar_url = currentPhotoUrl;
-    const { error } = await supabase
-      .from('users')
-      .upsert(payload, { onConflict: 'telegram_id' });
-    if (error) {
-      // Если в таблице ещё нет колонки avatar_url — не наша логика виновата,
-      // а отсутствующая миграция; пробуем ещё раз без неё, чтобы хотя бы
-      // ник/имя сохранились.
-      if (payload.avatar_url && String(error.message || '').includes('avatar_url')) {
-        delete payload.avatar_url;
-        const retry = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' });
-        if (retry.error) console.error('Не удалось синхронизировать профиль:', retry.error);
-      } else {
-        console.error('Не удалось синхронизировать профиль:', error);
+    if (currentPhotoUrl) basePayload.avatar_url = currentPhotoUrl;
+
+    async function writeProfile(payload) {
+      // Пишем через select → update/insert, как и saveData() — не используем
+      // upsert(onConflict:'telegram_id'), потому что для него в базе нужен
+      // UNIQUE-констрейнт на telegram_id, а его может не быть (именно это
+      // и вызывало "400 Bad Request" при обычном upsert).
+      const { data: existing } = await supabase
+        .from('users')
+        .select('telegram_id')
+        .eq('telegram_id', currentUserId)
+        .maybeSingle();
+
+      if (existing) {
+        return supabase.from('users').update(payload).eq('telegram_id', currentUserId);
       }
+      return supabase.from('users').insert({ telegram_id: currentUserId, ...payload });
     }
+
+    let { error } = await writeProfile(basePayload);
+
+    if (error && basePayload.avatar_url && String(error.message || '').includes('avatar_url')) {
+      // В базе ещё нет колонки avatar_url (миграция не выполнена) —
+      // сохраняем хотя бы ник/имя, не теряя всю запись из-за этого.
+      delete basePayload.avatar_url;
+      ({ error } = await writeProfile(basePayload));
+    }
+
+    if (error) console.error('Не удалось синхронизировать профиль:', error);
   } catch (e) {
     console.error('Критическая ошибка синхронизации профиля:', e);
   }
@@ -1978,7 +1990,7 @@ async function syncUserProfile() {
 // Вызываем при загрузке
 initTelegramUser();
 syncUserProfile();
-loadExchangeRate();
+window.loadExchangeRate ? window.loadExchangeRate() : loadExchangeRate();
 
 async function loadData() {
     try {
@@ -2890,11 +2902,23 @@ async function renderLeaderboard(kind) {
 
   const column = kind === 'coins' ? 'coins' : 'petals';
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('users')
       .select('telegram_id, username, first_name, petals, coins, avatar_url')
       .order(column, { ascending: false })
       .limit(10);
+
+    if (error && String(error.message || '').includes('avatar_url')) {
+      // Колонка avatar_url ещё не создана в базе (миграция не выполнена) —
+      // не роняем весь топ игроков из-за этого, читаем без неё.
+      const retry = await supabase
+        .from('users')
+        .select('telegram_id, username, first_name, petals, coins')
+        .order(column, { ascending: false })
+        .limit(10);
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       list.innerHTML = '<div style="text-align:center;font-size:12.5px;color:#cf9f9f;padding:10px;">Не удалось загрузить рейтинг</div>';
@@ -3444,7 +3468,7 @@ document.querySelectorAll('#adminTabs .tab-btn').forEach(tab => {
             loadRequests();
         }
         if (tabId === 'admin-rates') {
-            loadExchangeRate();
+            window.loadExchangeRate?.();
         }
     });
 });
@@ -3476,7 +3500,9 @@ document.getElementById('saveRatesSettings')?.addEventListener('click', async fu
         // loadExchangeRate() сам перечитает курс из базы и обновит и админ-поля,
         // и параметры обмена, которыми пользуются игроки (EXCHANGE_RATE_PETALS/COINS
         // объявлены в другом <script>-блоке, поэтому напрямую их отсюда не трогаем).
-        await loadExchangeRate();
+        // Обращаемся через window.* — функция объявлена в другом <script>-блоке,
+        // и там же явно вынесена в window, чтобы это работало.
+        await window.loadExchangeRate?.();
     } catch (e) {
         console.error('Ошибка сохранения курса:', e);
         showToast('❌ Ошибка сохранения курса (см. консоль)');
@@ -3880,11 +3906,23 @@ async function loadAdminUsersList(search) {
     container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:14px;">Загрузка…</div>';
 
     try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
             .from('users')
             .select('telegram_id, username, first_name, petals, coins, is_blocked, avatar_url')
             .order('telegram_id', { ascending: true })
             .limit(500);
+
+        if (error && String(error.message || '').includes('avatar_url')) {
+            // Колонка avatar_url ещё не создана в базе (миграция не выполнена) —
+            // не роняем список пользователей из-за этого, читаем без неё.
+            const retry = await supabase
+                .from('users')
+                .select('telegram_id, username, first_name, petals, coins, is_blocked')
+                .order('telegram_id', { ascending: true })
+                .limit(500);
+            data = retry.data;
+            error = retry.error;
+        }
 
         if (error) throw error;
 
