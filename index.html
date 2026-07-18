@@ -3061,6 +3061,17 @@ async function renderLeaderboard(kind) {
         showBlockedScreen();
         return;
       }
+      // ===== ВОССТАНОВЛЕНИЕ ЭНЕРГИИ =====
+function restoreEnergy() {
+    if (energy < MAX_ENERGY) {
+        energy = Math.min(energy + 1, MAX_ENERGY);
+        updateUI();
+        isDirty = true;
+    }
+}
+
+// Восстанавливаем 1 единицу энергии каждые 3 секунды
+setInterval(restoreEnergy, 3000);
 
       loadData();
       renderLeaderboard('petals');
@@ -3468,17 +3479,6 @@ async function loadRequests() {
   }
 }
 
-// ===== ВОССТАНОВЛЕНИЕ ЭНЕРГИИ =====
-function restoreEnergy() {
-    if (energy < MAX_ENERGY) {
-        energy = Math.min(energy + 1, MAX_ENERGY);
-        updateUI();
-        isDirty = true;
-    }
-}
-
-// Восстанавливаем 1 единицу энергии каждые 3 секунды
-setInterval(restoreEnergy, 3000);
 
 // ===== СОЗДАНИЕ ПРОМОКОДА С ПРОВЕРКОЙ АДМИНА =====
 async function createPromoCode() {
