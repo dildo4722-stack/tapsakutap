@@ -4069,7 +4069,7 @@ window.debugChest = async function() {
             if (weight <= 0) { showToast('❌ Шанс должен быть > 0'); return; }
             if (weight > 100) { showToast('❌ Шанс не может быть > 100%'); return; }
             
-            let prizes = window.currentChestPrizes || currentChestPrizes || [];
+            let prizes = window.currentChestPrizes || (typeof currentChestPrizes !== 'undefined' ? currentChestPrizes : []) || [];
             if (prizes.some(p => (p.key || p.special_key) === key)) {
                 showToast('❌ Уже есть в кейсе');
                 return;
