@@ -4319,7 +4319,37 @@ if (oldBtn) {
         });
     }
 
-    console.log('✅ Логика добавлена без ошибок тегов.');
+    // ---- 11. ПЕРЕПРИВЯЗКА КНОПОК "ЗАГРУЗИТЬ" / "СОХРАНИТЬ" / "СБРОС" ----
+    // У этих кнопок ещё висели старые обработчики (из блока выше по файлу),
+    // которые работали с устаревшей локальной переменной currentChestPrizes,
+    // а не с window.currentChestPrizes. Из-за этого Сохранить/Сброс
+    // не видели ни загруженные, ни добавленные товары. Пересоздаём кнопки
+    // (это снимает все старые addEventListener) и вешаем актуальные обработчики.
+    function rebindChestButton(id, handler) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const clone = btn.cloneNode(true);
+        btn.parentNode.replaceChild(clone, btn);
+        clone.addEventListener('click', handler);
+    }
+
+    rebindChestButton('loadChestBtn', function() {
+        const select = document.getElementById('adminChestSelect');
+        const resultEl = document.getElementById('chestAdminResult');
+        if (resultEl) resultEl.textContent = '';
+        if (select) window.loadChestPrizes(select.value);
+    });
+
+    rebindChestButton('saveChestBtn', function() {
+        window.saveChestToDB();
+    });
+
+    rebindChestButton('resetChestBtn', function() {
+        window.resetChestToDefault();
+    });
+
+    console.log('✅ Логика добавлена без ошибок тегов. Кнопки Загрузить/Сохранить/Сброс переподключены к актуальному состоянию.');
 })();
+</script>
 </body>
 </html>
