@@ -1902,16 +1902,25 @@ function initTelegramUser() {
         const displayName = user.first_name || user.username || 'Сакура';
         document.getElementById('username').textContent = displayName;
         
-        // Если есть фото профиля (только если у бота есть доступ)
+        // Буква-заглушка выставляется заранее — на случай, если фото не придёт
+        // или не загрузится (см. onerror ниже), круг никогда не остаётся пустым.
+        document.getElementById('avatarLetter').textContent = (user.first_name || user.username || 'S')[0].toUpperCase();
+        document.getElementById('avatarLetter').style.display = 'flex';
+
+        // Если есть фото профиля (Telegram передаёт photo_url не всегда —
+        // это ограничение самого Telegram Mini Apps, не наша логика)
         if (user.photo_url) {
           const avatarImg = document.getElementById('userAvatar');
+          avatarImg.onerror = function() {
+            // Фото не загрузилось (битая ссылка/404) — остаёмся на букве
+            avatarImg.style.display = 'none';
+            document.getElementById('avatarLetter').style.display = 'flex';
+          };
+          avatarImg.onload = function() {
+            document.getElementById('avatarLetter').style.display = 'none';
+          };
           avatarImg.src = user.photo_url;
           avatarImg.style.display = 'block';
-          document.getElementById('avatarLetter').style.display = 'none';
-        } else {
-          // Если фото нет, показываем первую букву имени
-          document.getElementById('avatarLetter').textContent = (user.first_name || 'S')[0].toUpperCase();
-          document.getElementById('avatarLetter').style.display = 'flex';
         }
         
         // Сохраняем ID пользователя (если нужно)
@@ -2525,6 +2534,7 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
       }
       updateExchangePreview(0, 0);
     }
+    window.loadExchangeRate = loadExchangeRate;
 
     const coinSVG = `
       <span class="coin-icon-wrapper" style="display: inline-flex; align-items: center; width: 16px; height: 16px; filter: drop-shadow(0 1px 3px rgba(255, 193, 7, 0.4)); animation: coinFloat 3s ease-in-out infinite;">
@@ -2739,17 +2749,28 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
     // special_prize_claims, чтобы админ увидел её и выдал приз вручную.
     async function grantSpecialPrize(specialKey, label) {
       showToast(`🎉 Выпал уникальный приз: ${label}! Админ свяжется с тобой для выдачи`);
+      const claimBase = {
+        telegram_id: currentUserId,
+        special_key: specialKey,
+        label: label,
+        fulfilled: false
+      };
       try {
-        await supabase.from('special_prize_claims').insert({
-          telegram_id: currentUserId,
+        const { error } = await supabase.from('special_prize_claims').insert({
+          ...claimBase,
           username: currentUsername || null,
-          first_name: currentFirstName || null,
-          special_key: specialKey,
-          label: label,
-          fulfilled: false
+          first_name: currentFirstName || null
         });
+        if (error) throw error;
       } catch (e) {
-        console.error('Не удалось записать заявку на уникальный приз:', e);
+        console.error('Не удалось записать заявку с username/first_name, пробую без них:', e);
+        // Если в таблице ещё нет колонок username/first_name (миграция не выполнена),
+        // всё равно сохраняем саму заявку — иначе она потеряется без следа.
+        try {
+          await supabase.from('special_prize_claims').insert(claimBase);
+        } catch (e2) {
+          console.error('Не удалось записать заявку на уникальный приз:', e2);
+        }
       }
     }
 
@@ -3667,10 +3688,45 @@ async function createPromoCode() {
     };
 
     try {
-        var { data, error } = await supabase
+        // Деактивация промокода не удаляет строку — код остаётся занят в таблице
+        // из-за уникального ограничения на "code". Поэтому сначала проверяем,
+        // нет ли уже строки с таким кодом (активной или нет).
+        var { data: existingPromo, error: findError } = await supabase
             .from('promocodes')
-            .insert([promoData])
-            .select();
+            .select('id, active')
+            .eq('code', code)
+            .maybeSingle();
+
+        if (findError) {
+            console.error('Ошибка проверки существующего промокода:', findError);
+            showToast('❌ Ошибка проверки промокода');
+            return;
+        }
+
+        if (existingPromo && existingPromo.active) {
+            showToast('❌ Промокод с таким названием уже существует и активен');
+            return;
+        }
+
+        var data, error;
+        if (existingPromo) {
+            // Промокод с этим кодом уже был, но деактивирован — переиспользуем
+            // строку: обновляем её новыми параметрами и снова включаем.
+            var updateResult = await supabase
+                .from('promocodes')
+                .update(promoData)
+                .eq('id', existingPromo.id)
+                .select();
+            data = updateResult.data;
+            error = updateResult.error;
+        } else {
+            var insertResult = await supabase
+                .from('promocodes')
+                .insert([promoData])
+                .select();
+            data = insertResult.data;
+            error = insertResult.error;
+        }
 
         if (error) {
             if (error.code === '23505') {
