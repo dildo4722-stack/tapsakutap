@@ -2180,17 +2180,18 @@ const ALL_PRIZES = [
   { key: 'admin', label: 'Админ', reward_type: 'special', amount: 0, special_key: 'admin' }
 ];
 
-// Иконки через SVG
 function getPrizeIcon(key) {
-  const icons = {
-    'petals': `<svg viewBox="0 0 24 24" fill="none" stroke="#ff9fb3" stroke-width="1.8"><path d="M12 3c1 1.3 1 2.7 0 3.8 1.5-.3 2.8.3 3.3 1.7-1.5.1-2.6 1-2.9 2.3 1.3-.6 2.7-.2 3.6.8-1.4.7-2.9.5-4-.6.4 1.4-.3 2.7-1.7 3.3-.4-1.3-1.3-2.2-2.6-2.3-1.3.1-2.2 1-2.6 2.3-1.4-.6-2.1-1.9-1.7-3.3-1.1 1.1-2.6 1.3-4 .6.9-1 2.3-1.4 3.6-.8-.3-1.3-1.4-2.2-2.9-2.3.5-1.4 1.8-2 3.3-1.7-.9-1.1-.9-2.5 0-3.8Z" stroke-linejoin="round"/></svg>`,
-    'vip': `<svg viewBox="0 0 24 24" fill="none" stroke="#ffd27a" stroke-width="1.8"><path d="M12 2L15 9l7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-7z" stroke-linejoin="round"/></svg>`,
-    'creative': `<svg viewBox="0 0 24 24" fill="none" stroke="#c9a3ff" stroke-width="1.8"><path d="M4 17l4-4 4 4M12 13l4-4 4 4M8 21v-4M16 21v-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10"/></svg>`,
-    'axolotl': `<svg viewBox="0 0 24 24" fill="none" stroke="#7fe3d0" stroke-width="1.8"><ellipse cx="12" cy="14" rx="8" ry="6"/><circle cx="8" cy="11" r="1.5" fill="#7fe3d0"/><circle cx="16" cy="11" r="1.5" fill="#7fe3d0"/><path d="M6 17c1.5 1.5 4 2 6 0 2 2 4.5 1.5 6 0" stroke-linecap="round"/><path d="M8 8l-2-3M16 8l2-3" stroke-linecap="round"/></svg>`,
-    'admin': `<svg viewBox="0 0 24 24" fill="none" stroke="#ff5f85" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V19.7a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H4.3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H10.5a1.6 1.6 0 0 0 1-1.5V4.3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10.5a1.6 1.6 0 0 0 1.5 1h.1a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" stroke-linejoin="round"/></svg>`
-  };
-  if (key.includes('petals')) return icons.petals;
-  return icons[key] || icons.petals;
+    // Простые эмодзи вместо SVG, чтобы избежать проблем с кодировкой
+    const icons = {
+        'petals': '🌸',
+        'vip': '⭐',
+        'creative': '🎨',
+        'axolotl': '🦎',
+        'admin': '👑'
+    };
+    
+    if (key && key.includes('petals')) return icons.petals;
+    return icons[key] || '🎁';
 }
 
 function getPrizeType(key) {
@@ -2297,34 +2298,35 @@ function getDefaultPrizes(chestKey) {
   });
 }
 
-// Отрисовка списка
 function renderPrizeList(prizes) {
-  const container = document.getElementById('adminPrizeList');
-  if (!container) return;
+    const container = document.getElementById('adminPrizeList');
+    if (!container) return;
 
-  if (!prizes || prizes.length === 0) {
-    container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:20px;">Нет призов</div>';
-    return;
-  }
+    if (!prizes || prizes.length === 0) {
+        container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:20px;">Нет призов</div>';
+        return;
+    }
 
-  const totalWeight = prizes.reduce((sum, p) => sum + (p.weight || 0), 0);
+    const totalWeight = prizes.reduce((sum, p) => sum + (p.weight || 0), 0);
 
-  container.innerHTML = prizes.map((prize, index) => {
-    const key = prize.key || prize.special_key || '';
-    return `
-    <div class="admin-prize-item" data-index="${index}">
-      <div class="prize-info">
-        <div class="prize-icon">${getPrizeIcon(key)}</div>
-        <span class="prize-name">${prize.label}</span>
-      </div>
-      <div class="prize-weight-wrap">
-        <input type="number" class="prize-weight-input" value="${prize.weight}" min="0.1" step="0.1" 
-               data-index="${index}" onchange="updatePrizeWeight(${index}, this.value)">
-        <span style="font-size:11px; color:#8a7a7a; min-width:28px;">${totalWeight > 0 ? ((prize.weight / totalWeight) * 100).toFixed(1) : 0}%</span>
-        <button class="prize-remove-btn" onclick="removePrize(${index})">✕</button>
-      </div>
-    </div>
-  `}).join('');
+    container.innerHTML = prizes.map((prize, index) => {
+        const key = prize.key || prize.special_key || '';
+        // Используем эмодзи вместо SVG
+        const icon = getPrizeIcon(key);
+        return `
+        <div class="admin-prize-item" data-index="${index}">
+            <div class="prize-info">
+                <div class="prize-icon" style="font-size:18px;">${icon}</div>
+                <span class="prize-name">${prize.label}</span>
+            </div>
+            <div class="prize-weight-wrap">
+                <input type="number" class="prize-weight-input" value="${prize.weight}" min="0.1" step="0.1" 
+                       data-index="${index}" onchange="updatePrizeWeight(${index}, this.value)">
+                <span style="font-size:11px; color:#8a7a7a; min-width:28px;">${totalWeight > 0 ? ((prize.weight / totalWeight) * 100).toFixed(1) : 0}%</span>
+                <button class="prize-remove-btn" onclick="removePrize(${index})">✕</button>
+            </div>
+        </div>
+    `}).join('');
 }
 
 function updatePrizeWeight(index, value) {
@@ -2345,37 +2347,40 @@ function removePrize(index) {
     window.updatePrizeWeight = updatePrizeWeight;
     window.removePrize = removePrize;
 
-// Добавление приза
 document.getElementById('addPrizeBtn')?.addEventListener('click', function() {
-  const select = document.getElementById('adminPrizeSelect');
-  const weightInput = document.getElementById('adminPrizeWeight');
-  
-  const key = select.value;
-  const weight = parseFloat(weightInput.value) || 10;
-  
-  if (!key) { showToast('Выберите товар'); return; }
-  if (weight <= 0) { showToast('Шанс должен быть > 0'); return; }
-  
-  if (currentChestPrizes.some(p => (p.key || p.special_key) === key)) {
-    showToast('Уже есть в кейсе');
-    return;
-  }
-  
-  const prize = ALL_PRIZES.find(p => p.key === key);
-  if (!prize) { showToast('Товар не найден'); return; }
-  
-  currentChestPrizes.push({
-    key: prize.key,
-    label: prize.label,
-    reward_type: prize.reward_type,
-    amount: prize.amount,
-    special_key: prize.special_key,
-    weight: weight,
-    id: null
-  });
-  
-  renderPrizeList(currentChestPrizes);
-  showToast(`✅ Добавлен: ${prize.label} (${weight}%)`);
+    const select = document.getElementById('adminPrizeSelect');
+    const weightInput = document.getElementById('adminPrizeWeight');
+    
+    const key = select.value;
+    const weight = parseFloat(weightInput.value) || 10;
+    
+    if (!key) { showToast('Выберите товар'); return; }
+    if (weight <= 0) { showToast('Шанс должен быть > 0'); return; }
+    
+    if (currentChestPrizes.some(p => (p.key || p.special_key) === key)) {
+        showToast('Уже есть в кейсе');
+        return;
+    }
+    
+    const prize = ALL_PRIZES.find(p => p.key === key);
+    if (!prize) { showToast('Товар не найден'); return; }
+    
+    currentChestPrizes.push({
+        key: prize.key,
+        label: prize.label,
+        reward_type: prize.reward_type,
+        amount: prize.amount,
+        special_key: prize.special_key,
+        weight: weight,
+        id: null
+    });
+    
+    // Обновляем список
+    renderPrizeList(currentChestPrizes);
+    showToast(`✅ Добавлен: ${prize.label} (${weight}%)`);
+    
+    // Сбрасываем поле ввода шанса на 10
+    weightInput.value = 10;
 });
 
 // Загрузка кейса
