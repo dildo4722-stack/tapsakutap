@@ -786,6 +786,47 @@ input[type=number] {
       text-align: center;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+
+    /* ===== СТИЛИ ДЛЯ ТАБОВ В ДОСТИЖЕНИЯХ ===== */
+.ach-tabs-container {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ach-tabs-container::-webkit-scrollbar {
+    display: none;
+}
+
+.ach-tab {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #d8b8b8;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.ach-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ach-tab.active {
+    background: linear-gradient(135deg, #ff9fb3, #ff5f85);
+    color: #2d1414;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(255, 95, 133, 0.3);
+}
   </style>
 </head>
 <body>
@@ -1272,7 +1313,6 @@ input[type=number] {
         <button class="ach-tab" data-cat="quests">Задания</button>
         <button class="ach-tab" data-cat="refs">Рефералы</button>
         <button class="ach-tab" data-cat="rating">Рейтинг</button>
-        <button class="ach-tab" data-cat="level">Уровень</button>
         <button class="ach-tab" data-cat="seasons">Сезоны</button>
         <button class="ach-tab" data-cat="promos">Промокоды</button>
       </div>
