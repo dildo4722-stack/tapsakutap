@@ -3008,104 +3008,82 @@ async function deactivatePromo(id, code) {
 }
 
 
-// ===== АКТИВАЦИЯ ПРОМОКОДА (ИСПРАВЛЕННАЯ) =====
-// ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ activatePromoCode =====
-window.activatePromoCode = async function(promoCode) {
+// Исправленная функция
+async function activatePromoCode(promoCode) {
     if (!promoCode || promoCode.trim() === '') {
         showToast('❌ Введи промокод');
         return;
     }
 
-    var userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
-    var code = promoCode.trim().toUpperCase();
+    const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
+    const code = promoCode.trim().toUpperCase();
 
     try {
-        var promoResult = await window.supabaseClient
+        // Проверяем промокод в Supabase
+        const { data: promo, error } = await window.supabaseClient
             .from('promocodes')
             .select('*')
             .eq('code', code)
             .maybeSingle();
-        
-        if (promoResult.error || !promoResult.data) {
+
+        if (error || !promo) {
             showToast('❌ Промокод не найден');
             return;
         }
 
-        var promo = promoResult.data;
+        // Проверки валидности
+        if (!promo.active) { showToast('❌ Промокод неактивен'); return; }
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) { showToast('❌ Срок действия истек'); return; }
+        if (promo.used_count >= promo.uses_limit) { showToast('❌ Промокод уже использован'); return; }
 
-        if (!promo.active) {
-            showToast('❌ Промокод неактивен');
-            return;
-        }
-
-        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
-            showToast('❌ Срок действия истек');
-            return;
-        }
-
-        if (promo.used_count >= promo.uses_limit) {
-            showToast('❌ Промокод уже использован');
-            return;
-        }
-
-        // Применяем награду
+        // --- ПРИМЕНЯЕМ НАГРАДУ, РАБОТАЯ С ПЕРЕМЕННЫМИ ---
         if (promo.reward_type === 'petals') {
-            const petalDisplay = document.getElementById('petalDisplay');
-            let currentPetals = parseInt(petalDisplay?.textContent?.replace(/[^0-9]/g, '')) || 0;
-            currentPetals += promo.reward_amount || 0;
-            if (petalDisplay) petalDisplay.textContent = currentPetals;
-            localStorage.setItem('saku_petals', currentPetals);
+            // ИЗМЕНЕНО: Работаем с переменной petals, а НЕ с DOM
+            petals += promo.reward_amount;
             showToast(`🎉 +${promo.reward_amount} 🌸 лепестков!`);
-            
         } else if (promo.reward_type === 'coins') {
-            const coinDisplay = document.getElementById('coinDisplay');
-            let currentCoins = parseInt(coinDisplay?.textContent?.replace(/[^0-9]/g, '')) || 0;
-            currentCoins += promo.reward_amount || 0;
-            if (coinDisplay) coinDisplay.textContent = currentCoins;
-            localStorage.setItem('saku_coins', currentCoins);
+            // ИЗМЕНЕНО: Работаем с переменной coins
+            coins += promo.reward_amount;
             showToast(`🎉 +${promo.reward_amount} 🪙 монет!`);
-            
         } else if (promo.reward_type === 'multiplier') {
             const mult = promo.multiplier_value || 2;
             const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-            localStorage.setItem('saku_tapMultiplier', mult);
-            localStorage.setItem('saku_tapMultiplierExpiresAt', expiresAt);
+            // Обновляем глобальные переменные и localStorage
             window.tapMultiplier = mult;
             window.tapMultiplierExpiresAt = expiresAt;
-            
-            const multiplierDisplay = document.getElementById('multiplierDisplay');
-            if (multiplierDisplay) {
-                multiplierDisplay.textContent = `x${mult}`;
-            }
+            localStorage.setItem('saku_tapMultiplier', mult);
+            localStorage.setItem('saku_tapMultiplierExpiresAt', expiresAt);
             showToast(`🎉 x${mult} множитель на 24 часа!`);
         }
 
-        // Обновляем использование промокода
+        // ОБНОВЛЯЕМ UI ОДИН РАЗ
+        updateUI();
+        updateAchievements();
+
+        // Увеличиваем счетчик использований в БД
         await window.supabaseClient
             .from('promocodes')
             .update({ used_count: promo.used_count + 1 })
             .eq('id', promo.id);
 
-        // Обновляем статистику
-        let promosUsed = parseInt(localStorage.getItem('saku_promosUsed')) || 0;
-        promosUsed += 1;
-        localStorage.setItem('saku_promosUsed', promosUsed);
-
-        // Обновляем UI
-        if (typeof updateUI === 'function') updateUI();
-        if (typeof updateAchievements === 'function') updateAchievements();
-
+        // Увеличиваем счетчик промокодов для достижений
+        if (typeof promosUsed !== 'undefined') {
+            promosUsed += 1;
+        } else {
+            // Если переменная не объявлена глобально, создаем её
+            window.promosUsed = (window.promosUsed || 0) + 1;
+        }
+        
         // Очищаем поле ввода
         const promoInput = document.getElementById('promoInput');
         if (promoInput) promoInput.value = '';
 
     } catch (e) {
         console.error('❌ Ошибка активации:', e);
-        showToast('❌ Ошибка при активации промокода: ' + e.message);
+        showToast('❌ Ошибка при активации промокода');
     }
-};
-
-console.log('✅ Функция activatePromoCode исправлена!');
+}
+  
 // ===== ИНИЦИАЛИЗАЦИЯ АДМИН-ПАНЕЛИ =====
 async function initAdminPanel() {
     var isAdmin = await checkAdminAccess();
