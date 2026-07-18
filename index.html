@@ -4011,7 +4011,123 @@ window.debugChest = async function() {
     return data;
 };
 
-// Вызовите в консоли: debugChest()
+<script>
+// ============================================
+// ===== ИСПРАВЛЕНИЕ КНОПКИ "➕" В АДМИН-ПАНЕЛИ =====
+// ============================================
+
+(function() {
+    'use strict';
+    
+    console.log('🔧 Исправление админ-панели загружено');
+
+    // Проверяем существование кнопки
+    const addBtn = document.getElementById('addPrizeBtn');
+    if (!addBtn) {
+        console.log('❌ Кнопка addPrizeBtn не найдена');
+        return;
+    }
+
+    console.log('✅ Кнопка addPrizeBtn найдена');
+
+    // Удаляем старые обработчики
+    const newAddBtn = addBtn.cloneNode(true);
+    addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+
+    // Добавляем новый обработчик
+    newAddBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('🔄 Нажата кнопка "➕"');
+        
+        const select = document.getElementById('adminPrizeSelect');
+        const weightInput = document.getElementById('adminPrizeWeight');
+        
+        if (!select || !weightInput) {
+            showToast('❌ Ошибка: элементы не найдены');
+            return;
+        }
+        
+        const key = select.value;
+        const weight = parseFloat(weightInput.value) || 10;
+        
+        console.log('📦 Выбран приз:', key, 'шанс:', weight);
+        
+        if (!key) { 
+            showToast('❌ Выберите товар'); 
+            return; 
+        }
+        
+        if (weight <= 0) { 
+            showToast('❌ Шанс должен быть > 0'); 
+            return; 
+        }
+        
+        if (weight > 100) { 
+            showToast('❌ Шанс не может быть больше 100%'); 
+            return; 
+        }
+        
+        // Проверяем, есть ли уже такой приз
+        if (currentChestPrizes.some(p => (p.key || p.special_key) === key)) {
+            showToast('❌ Уже есть в кейсе');
+            return;
+        }
+        
+        // Находим приз в списке
+        const prize = ALL_PRIZES.find(p => p.key === key);
+        if (!prize) { 
+            showToast('❌ Товар не найден'); 
+            return; 
+        }
+        
+        // Добавляем приз
+        currentChestPrizes.push({
+            key: prize.key,
+            label: prize.label,
+            reward_type: prize.reward_type,
+            amount: prize.amount,
+            special_key: prize.special_key,
+            weight: weight,
+            id: null
+        });
+        
+        console.log('✅ Добавлен приз:', prize.label);
+        
+        // Обновляем список
+        renderPrizeList(currentChestPrizes);
+        showToast(`✅ Добавлен: ${prize.label} (${weight}%)`);
+        
+        // Сбрасываем поле ввода
+        weightInput.value = 10;
+    });
+
+    console.log('✅ Кнопка "➕" исправлена!');
+
+})();
+
+// ============================================
+// ===== ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА =====
+// ============================================
+
+// Проверяем, что функции существуют
+setTimeout(function() {
+    console.log('🔍 Проверка функций:');
+    console.log('  loadChestPrizes:', typeof window.loadChestPrizes);
+    console.log('  renderPrizeList:', typeof window.renderPrizeList);
+    console.log('  ALL_PRIZES:', typeof ALL_PRIZES);
+    console.log('  currentChestPrizes:', typeof currentChestPrizes);
+    
+    if (typeof renderPrizeList !== 'function') {
+        console.log('⚠️ renderPrizeList не определена!');
+    }
+    
+    if (typeof ALL_PRIZES === 'undefined') {
+        console.log('⚠️ ALL_PRIZES не определена!');
+    }
+}, 1000);
+</script>
 
 // ===== ВЫЗОВ ПРИ ЗАГРУЗКЕ =====
 setTimeout(function() {
