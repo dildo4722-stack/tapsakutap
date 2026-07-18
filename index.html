@@ -1999,22 +1999,24 @@ function completeQuest() {
 
     function handleTap(e) {
     if (e) e.preventDefault();
+    
+    console.log('🟢 Тап! Энергия:', energy); // <-- добавим лог
+    
     if (energy < 1) {
         if (tapBtn) {
             tapBtn.style.transform = 'scale(0.85)';
             setTimeout(() => tapBtn.style.transform = '', 100);
         }
+        showToast('❌ Недостаточно энергии!');
         return;
     }
     
-    // ===== ПРОВЕРЯЕМ МНОЖИТЕЛЬ =====
     // Получаем множитель из localStorage
     let currentMultiplier = parseInt(localStorage.getItem('saku_tapMultiplier')) || 1;
     let expiresAt = parseInt(localStorage.getItem('saku_tapMultiplierExpiresAt')) || 0;
     
     // Проверяем, не истёк ли множитель
     if (Date.now() > expiresAt && expiresAt > 0) {
-        // Множитель истёк - сбрасываем
         localStorage.setItem('saku_tapMultiplier', '1');
         localStorage.setItem('saku_tapMultiplierExpiresAt', '0');
         currentMultiplier = 1;
@@ -2023,22 +2025,22 @@ function completeQuest() {
         showToast('⏰ Множитель истек!');
     }
     
-    // Применяем множитель
     const multiplier = currentMultiplier || 1;
     
     energy -= 1;
-    petals += multiplier; // <-- используем множитель!
+    petals += multiplier;
     totalTaps += 1;
     tapTaskCount += 1;
     isDirty = true;
 
+    console.log('✅ Тап выполнен! +' + multiplier + ' лепестков');
+    
     spawnSakura();
     updateUI();
     checkTapTask();
     updateAchievements();
     if (navigator.vibrate) navigator.vibrate(8);
 }
-
     // ===== МОДАЛКИ =====
     document.querySelectorAll('[data-modal]').forEach(btn => {
       btn.addEventListener('click', () => {
