@@ -2979,7 +2979,7 @@ async function deactivatePromo(id, code) {
 }
 
 
-// ===== АКТИВАЦИЯ ПРОМОКОДА (РАБОЧАЯ ВЕРСИЯ) =====
+// ===== АКТИВАЦИЯ ПРОМОКОДА (С СОХРАНЕНИЕМ В БД) =====
 async function activatePromoCode(promoCode) {
     if (!promoCode || promoCode.trim() === '') {
         showToast('❌ Введи промокод');
@@ -2990,6 +2990,7 @@ async function activatePromoCode(promoCode) {
     var code = promoCode.trim().toUpperCase();
 
     try {
+        // 1. Проверяем промокод
         var promoResult = await supabase
             .from('promocodes')
             .select('*')
@@ -3003,6 +3004,7 @@ async function activatePromoCode(promoCode) {
 
         var promo = promoResult.data;
 
+        // 2. Проверки
         if (!promo.active) {
             showToast('❌ Промокод неактивен');
             return;
@@ -3014,53 +3016,138 @@ async function activatePromoCode(promoCode) {
         }
 
         if (promo.used_count >= promo.uses_limit) {
-            showToast('❌ Промокод уже использован максимальное количество раз');
+            showToast('❌ Промокод уже использован');
             return;
         }
 
-        // Применяем награду через DOM
-        if (promo.reward_type === 'petals') {
-            const petalDisplay = document.getElementById('petalDisplay');
-            let currentPetals = parseInt(petalDisplay.textContent.replace(/[^0-9]/g, '')) || 0;
-            currentPetals += promo.reward_amount || 0;
-            petalDisplay.textContent = currentPetals;
-            localStorage.setItem('petals', currentPetals);
-            showToast(`🎉 +${promo.reward_amount} 🌸 лепестков!`);
-        } else if (promo.reward_type === 'coins') {
-            const coinDisplay = document.getElementById('coinDisplay');
-            let currentCoins = parseInt(coinDisplay.textContent.replace(/[^0-9]/g, '')) || 0;
-            currentCoins += promo.reward_amount || 0;
-            coinDisplay.textContent = currentCoins;
-            localStorage.setItem('coins', currentCoins);
-            showToast(`🎉 +${promo.reward_amount} 🪙 монет!`);
-        } else if (promo.reward_type === 'multiplier') {
-            localStorage.setItem('tapMultiplier', promo.multiplier_value || 2);
-            localStorage.setItem('tapMultiplierExpiresAt', Date.now() + 24 * 60 * 60 * 1000);
-            showToast(`🎉 x${promo.multiplier_value} множитель на 24 часа!`);
+        // 3. Проверяем, использовал ли пользователь
+        var usedCheck = await supabase
+            .from('used_promocodes')
+            .select('id')
+            .eq('telegram_id', String(userId))
+            .eq('promo_id', promo.id)
+            .maybeSingle();
+
+        if (usedCheck.data) {
+            showToast('❌ Вы уже использовали этот промокод');
+            return;
         }
 
-        // Обновляем использование промокода
+        // ============================================================
+        // 4. ПОЛУЧАЕМ ТЕКУЩИЙ БАЛАНС ИЗ БД
+        // ============================================================
+        var { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('petals, coins, stars')
+            .eq('telegram_id', String(userId))
+            .maybeSingle();
+
+        if (userError) {
+            console.error('Ошибка получения пользователя:', userError);
+            showToast('❌ Ошибка при получении баланса');
+            return;
+        }
+
+        // Текущий баланс из БД
+        let currentPetals = userData?.petals || 0;
+        let currentCoins = userData?.coins || 0;
+        let currentStars = userData?.stars || 0;
+
+        console.log('📊 Текущий баланс из БД:', { petals: currentPetals, coins: currentCoins });
+
+        // ============================================================
+        // 5. ПРИМЕНЯЕМ НАГРАДУ
+        // ============================================================
+        let rewardMessage = '';
+        let rewardAmount = 0;
+
+        if (promo.reward_type === 'petals') {
+            rewardAmount = promo.reward_amount || 0;
+            currentPetals += rewardAmount;
+            rewardMessage = `+${rewardAmount} 🌸 лепестков`;
+            
+        } else if (promo.reward_type === 'coins') {
+            rewardAmount = promo.reward_amount || 0;
+            currentCoins += rewardAmount;
+            rewardMessage = `+${rewardAmount} 🪙 монет`;
+            
+        } else if (promo.reward_type === 'multiplier') {
+            const mult = promo.multiplier_value || 2;
+            localStorage.setItem('saku_tapMultiplier', mult);
+            localStorage.setItem('saku_tapMultiplierExpiresAt', Date.now() + 24 * 60 * 60 * 1000);
+            rewardMessage = `x${mult} множитель на 24 часа`;
+            
+        } else {
+            showToast('❌ Неизвестный тип награды');
+            return;
+        }
+
+        // ============================================================
+        // 6. СОХРАНЯЕМ НОВЫЙ БАЛАНС В БД
+        // ============================================================
+        if (promo.reward_type === 'petals' || promo.reward_type === 'coins') {
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({
+                    petals: currentPetals,
+                    coins: currentCoins,
+                    stars: currentStars
+                })
+                .eq('telegram_id', String(userId));
+
+            if (updateError) {
+                console.error('Ошибка обновления баланса:', updateError);
+                showToast('❌ Ошибка сохранения баланса');
+                return;
+            }
+
+            // Обновляем отображение
+            const petalDisplay = document.getElementById('petalDisplay');
+            const coinDisplay = document.getElementById('coinDisplay');
+            if (petalDisplay) petalDisplay.textContent = currentPetals;
+            if (coinDisplay) coinDisplay.textContent = currentCoins;
+
+            // Сохраняем в localStorage для кэша
+            localStorage.setItem('saku_petals', currentPetals);
+            localStorage.setItem('saku_coins', currentCoins);
+        }
+
+        // ============================================================
+        // 7. ЗАПИСЫВАЕМ ИСПОЛЬЗОВАНИЕ
+        // ============================================================
         await supabase
             .from('promocodes')
             .update({ used_count: promo.used_count + 1 })
             .eq('id', promo.id);
 
-        // Обновляем статистику
-        let promosUsed = parseInt(localStorage.getItem('promosUsed')) || 0;
-        promosUsed += 1;
-        localStorage.setItem('promosUsed', promosUsed);
+        await supabase
+            .from('used_promocodes')
+            .insert({
+                telegram_id: String(userId),
+                promo_id: promo.id,
+                reward_amount: rewardAmount,
+                reward_type: promo.reward_type
+            });
 
-        // Обновляем UI и достижения
+        // Обновляем статистику промокодов
+        let promosUsed = parseInt(localStorage.getItem('saku_promosUsed')) || 0;
+        promosUsed += 1;
+        localStorage.setItem('saku_promosUsed', promosUsed);
+
+        // Обновляем UI
         if (typeof updateUI === 'function') updateUI();
         if (typeof updateAchievements === 'function') updateAchievements();
-        if (typeof saveData === 'function') saveData();
 
-        // Очищаем поле ввода
+        // Показываем успех
+        showToast(`🎉 Промокод активирован! ${rewardMessage}`);
+        console.log('✅ Новый баланс сохранён в БД:', { petals: currentPetals, coins: currentCoins });
+
+        // Очищаем поле
         const promoInput = document.getElementById('promoInput');
         if (promoInput) promoInput.value = '';
 
     } catch (e) {
-        console.error('Ошибка:', e);
+        console.error('❌ Ошибка:', e);
         showToast('❌ Ошибка при активации промокода');
     }
 }
