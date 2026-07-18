@@ -1897,9 +1897,10 @@ function initTelegramUser() {
         currentUsername = user.username || '';
         currentFirstName = user.first_name || '';
 
-        // Устанавливаем имя пользователя
-        const username = user.username || user.first_name || 'Сакура';
-        document.getElementById('username').textContent = username;
+        // Устанавливаем отображаемое имя: приоритет — ник (first_name),
+        // а не @username
+        const displayName = user.first_name || user.username || 'Сакура';
+        document.getElementById('username').textContent = displayName;
         
         // Если есть фото профиля (только если у бота есть доступ)
         if (user.photo_url) {
@@ -1924,6 +1925,7 @@ function initTelegramUser() {
 
 // Вызываем при загрузке
 initTelegramUser();
+loadExchangeRate();
 
 async function loadData() {
     try {
@@ -2487,7 +2489,42 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
     // ===== Обмен лепестков на монеты =====
     const exchangeInput = document.getElementById('exchangeInput');
     const exchangePreview = document.getElementById('exchangePreview');
-    const EXCHANGE_RATE = 10000;
+    // Курс по умолчанию (используется, пока не загружен курс из Supabase,
+    // либо если админ его ещё ни разу не сохранял): 10 000 🌸 = 1 🪙.
+    let EXCHANGE_RATE_PETALS = 10000;
+    let EXCHANGE_RATE_COINS = 1;
+
+    // Загружает текущий курс обмена из Supabase (таблица exchange_rate, строка id=1).
+    // Вызывается при старте приложения (для всех игроков) и при открытии вкладки
+    // "Курс валют" в админ-панели (чтобы подставить актуальные значения в поля).
+    async function loadExchangeRate() {
+      try {
+        const { data, error } = await supabase
+          .from('exchange_rate')
+          .select('rate_petals, rate_coins')
+          .eq('id', 1)
+          .maybeSingle();
+
+        if (!error && data) {
+          EXCHANGE_RATE_PETALS = Number(data.rate_petals) || EXCHANGE_RATE_PETALS;
+          EXCHANGE_RATE_COINS = Number(data.rate_coins) || EXCHANGE_RATE_COINS;
+        }
+      } catch (e) {
+        console.error('Не удалось загрузить курс обмена, использую значение по умолчанию:', e);
+      }
+
+      const rp = document.getElementById('ratePetals');
+      const rc = document.getElementById('rateCoins');
+      if (rp) rp.value = EXCHANGE_RATE_PETALS;
+      if (rc) rc.value = EXCHANGE_RATE_COINS;
+
+      if (exchangeInput) {
+        exchangeInput.step = EXCHANGE_RATE_PETALS;
+        exchangeInput.min = EXCHANGE_RATE_PETALS;
+        exchangeInput.placeholder = `Сколько лепестков обменять (кратно ${EXCHANGE_RATE_PETALS.toLocaleString()})`;
+      }
+      updateExchangePreview(0, 0);
+    }
 
     const coinSVG = `
       <span class="coin-icon-wrapper" style="display: inline-flex; align-items: center; width: 16px; height: 16px; filter: drop-shadow(0 1px 3px rgba(255, 193, 7, 0.4)); animation: coinFloat 3s ease-in-out infinite;">
@@ -2499,29 +2536,29 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
       </span>
     `;
 
-    function updateExchangePreview(coinsCount) {
-      const spentPetals = coinsCount * EXCHANGE_RATE;
+    function updateExchangePreview(coinsCount, spentPetals) {
       exchangePreview.innerHTML = `
-        ${coinsCount} ${coinSVG} <span style="color: #cf9f9f; font-weight: normal; margin-left: 4px;">(спишется ${spentPetals.toLocaleString()} 🌸)</span>
+        ${coinsCount} ${coinSVG} <span style="color: #cf9f9f; font-weight: normal; margin-left: 4px;">(спишется ${(spentPetals || 0).toLocaleString()} 🌸)</span>
       `;
     }
 
     exchangeInput.addEventListener('input', () => {
       const val = Math.max(0, Math.floor(Number(exchangeInput.value) || 0));
-      const wholeCoins = Math.floor(val / EXCHANGE_RATE);
-      updateExchangePreview(wholeCoins);
+      const wholeUnits = Math.floor(val / EXCHANGE_RATE_PETALS);
+      updateExchangePreview(wholeUnits * EXCHANGE_RATE_COINS, wholeUnits * EXCHANGE_RATE_PETALS);
     });
 
     document.getElementById('exchangeBtn').addEventListener('click', () => {
       const val = Math.max(0, Math.floor(Number(exchangeInput.value) || 0));
-      const wholeCoins = Math.floor(val / EXCHANGE_RATE);
-      const petalsToSpend = wholeCoins * EXCHANGE_RATE;
+      const wholeUnits = Math.floor(val / EXCHANGE_RATE_PETALS);
+      const coinsGained = wholeUnits * EXCHANGE_RATE_COINS;
+      const petalsToSpend = wholeUnits * EXCHANGE_RATE_PETALS;
 
-      if (wholeCoins <= 0) { showToast('Укажи хотя бы 10 000 лепестков'); return; }
+      if (wholeUnits <= 0) { showToast(`Укажи хотя бы ${EXCHANGE_RATE_PETALS.toLocaleString()} лепестков`); return; }
       if (petalsToSpend > petals) { showToast('Недостаточно лепестков'); return; }
 
       petals -= petalsToSpend;
-      coins += wholeCoins;
+      coins += coinsGained;
       totalExchangesCount += 1;
       isDirty = true;
 
@@ -2530,9 +2567,9 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
       saveData();
 
       exchangeInput.value = '';
-      updateExchangePreview(0);
+      updateExchangePreview(0, 0);
 
-      showToast(`Обменено: -${formatNumber(petalsToSpend)} 🌸 ➔ +${wholeCoins} 🪙`);
+      showToast(`Обменено: -${formatNumber(petalsToSpend)} 🌸 ➔ +${coinsGained} 🪙`);
     });
 
     // ===== Промокод =====
@@ -2705,6 +2742,8 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
       try {
         await supabase.from('special_prize_claims').insert({
           telegram_id: currentUserId,
+          username: currentUsername || null,
+          first_name: currentFirstName || null,
           special_key: specialKey,
           label: label,
           fulfilled: false
@@ -2788,7 +2827,7 @@ async function renderLeaderboard(kind) {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('telegram_id, petals, coins')
+      .select('telegram_id, username, first_name, petals, coins')
       .order(column, { ascending: false })
       .limit(10);
 
@@ -2801,7 +2840,8 @@ async function renderLeaderboard(kind) {
     list.innerHTML = '';
     (data || []).forEach((row, i) => {
       const isMe = String(row.telegram_id) === String(currentUserId);
-      const name = isMe ? 'Ты' : `Игрок #${String(row.telegram_id).slice(-4)}`;
+      const rawName = row.first_name || (row.username ? '@' + row.username : `Игрок #${String(row.telegram_id).slice(-4)}`);
+      const name = isMe ? 'Ты' : (typeof escapeHtml === 'function' ? escapeHtml(rawName) : rawName);
       const val = kind === 'coins' ? (row.coins ?? 0) : (row.petals ?? 0);
       const rowEl = document.createElement('div');
       rowEl.className = 'leader-row';
@@ -3236,7 +3276,7 @@ setTimeout(() => {
       <div class="card">
         <label style="display:block; margin-bottom:8px; font-size:13px; color:#cf9f9f;">Обмен Лепестков на Монеты</label>
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <input type="number" class="input" id="ratePetals" value="100" style="margin:0; text-align:center;">
+          <input type="number" class="input" id="ratePetals" value="10000" style="margin:0; text-align:center;">
           <span style="color:#ff5f85; font-weight:bold;">&rarr;</span>
           <input type="number" class="input" id="rateCoins" value="1" style="margin:0; text-align:center;">
         </div>
@@ -3328,28 +3368,7 @@ setTimeout(() => {
     <div class="admin-tab-content" id="admin-requests" style="display:none;">
       <div class="card" style="padding:10px;">
         <div id="adminRequestsList" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
-          <!-- Пример заявки -->
-          <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:600; font-size:13px; color:#f0dada;">Заявка на: Креатив</div>
-              <div style="font-size:12px; opacity:0.6; color:#ff9fb3;">От: @player_one</div>
-            </div>
-            <div style="display:flex; gap:5px;">
-              <button class="btn" style="font-size:11px; padding:6px 10px;" onclick="resolveRequest(1, 'approve')">Одобрить</button>
-              <button class="btn secondary" style="font-size:11px; padding:6px 5px;" onclick="resolveRequest(1, 'decline')">&times;</button>
-            </div>
-          </div>
-          <!-- Пример 2 -->
-          <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:600; font-size:13px; color:#f0dada;">Заявка на: Аксолотль</div>
-              <div style="font-size:12px; opacity:0.6; color:#ff9fb3;">От: @saku_king</div>
-            </div>
-            <div style="display:flex; gap:5px;">
-              <button class="btn" style="font-size:11px; padding:6px 10px;" onclick="resolveRequest(2, 'approve')">Одобрить</button>
-              <button class="btn secondary" style="font-size:11px; padding:6px 5px;" onclick="resolveRequest(2, 'decline')">&times;</button>
-            </div>
-          </div>
+          <div style="text-align:center; font-size:12px; color:#cf9f9f; padding:14px;">Открой вкладку, чтобы загрузить список</div>
         </div>
       </div>
     </div>
@@ -3393,11 +3412,47 @@ document.querySelectorAll('#adminTabs .tab-btn').forEach(tab => {
         if (tabId === 'admin-users') {
             loadAdminUsersList(document.getElementById('searchUserInAdmin')?.value || '');
         }
+        if (tabId === 'admin-requests') {
+            loadRequests();
+        }
+        if (tabId === 'admin-rates') {
+            loadExchangeRate();
+        }
     });
 });
 
 document.getElementById('searchUserInAdmin')?.addEventListener('input', function() {
     renderAdminUsersList(this.value);
+});
+
+// ============================================
+// ===== АДМИН-ПАНЕЛЬ: КУРС ВАЛЮТ =====
+// ============================================
+document.getElementById('saveRatesSettings')?.addEventListener('click', async function() {
+    const rp = parseFloat(document.getElementById('ratePetals')?.value);
+    const rc = parseFloat(document.getElementById('rateCoins')?.value);
+
+    if (!rp || rp <= 0 || !rc || rc <= 0) {
+        showToast('❌ Укажи корректный курс (оба значения > 0)');
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('exchange_rate')
+            .upsert({ id: 1, rate_petals: rp, rate_coins: rc });
+
+        if (error) throw error;
+
+        showToast(`✅ Курс обновлён: ${rp} 🌸 = ${rc} 🪙`);
+        // loadExchangeRate() сам перечитает курс из базы и обновит и админ-поля,
+        // и параметры обмена, которыми пользуются игроки (EXCHANGE_RATE_PETALS/COINS
+        // объявлены в другом <script>-блоке, поэтому напрямую их отсюда не трогаем).
+        await loadExchangeRate();
+    } catch (e) {
+        console.error('Ошибка сохранения курса:', e);
+        showToast('❌ Ошибка сохранения курса (см. консоль)');
+    }
 });
 // ============================================
 // ===== АДМИН-ПАНЕЛЬ: СИСТЕМА ПРОМОКОДОВ =====
@@ -3452,6 +3507,23 @@ async function resolveRequest(id, action) {
   }
 }
 
+// Открыть чат с пользователем в Telegram (по username, если он есть)
+function openUserChat(username, telegramId) {
+  if (username) {
+    const url = 'https://t.me/' + username;
+    if (window.Telegram?.WebApp?.openTelegramLink) {
+      window.Telegram.WebApp.openTelegramLink(url);
+    } else {
+      window.open(url, '_blank');
+    }
+  } else {
+    if (navigator.clipboard && telegramId) {
+      navigator.clipboard.writeText(String(telegramId));
+    }
+    showToast('У пользователя нет username. ID скопирован: ' + telegramId);
+  }
+}
+
 async function loadRequests() {
   const container = document.getElementById('adminRequestsList');
   if (!container) return;
@@ -3469,19 +3541,40 @@ async function loadRequests() {
       container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:10px;">Нет активных заявок</div>';
       return;
     }
+
+    // Часть старых заявок могла быть создана до появления полей username/first_name —
+    // подтягиваем их из таблицы users по telegram_id, чтобы кнопка "Написать" работала и для них.
+    const missingIds = [...new Set(
+      data.filter(c => !c.username && !c.first_name).map(c => c.telegram_id)
+    )];
+    let usersMap = {};
+    if (missingIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('telegram_id, username, first_name')
+        .in('telegram_id', missingIds);
+      (usersData || []).forEach(u => { usersMap[u.telegram_id] = u; });
+    }
     
-    container.innerHTML = data.map(claim => `
-      <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-        <div>
+    container.innerHTML = data.map(claim => {
+      const extra = usersMap[claim.telegram_id] || {};
+      const username = claim.username || extra.username || '';
+      const firstName = claim.first_name || extra.first_name || '';
+      const displayName = firstName || (username ? '@' + username : `Игрок #${String(claim.telegram_id).slice(-4)}`);
+      const usernameAttr = username.replace(/'/g, "\\'");
+      return `
+      <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <div style="min-width:0;">
           <div style="font-weight:600; font-size:13px; color:#f0dada;">Заявка на: ${claim.label}</div>
-          <div style="font-size:12px; opacity:0.6; color:#ff9fb3;">От: ${claim.telegram_id}</div>
+          <div style="font-size:12px; opacity:0.6; color:#ff9fb3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">От: ${displayName}${username ? ' (@' + username + ')' : ''}</div>
         </div>
-        <div style="display:flex; gap:5px;">
+        <div style="display:flex; gap:5px; flex-shrink:0;">
+          <button class="btn secondary" style="font-size:11px; padding:6px 8px;" title="Написать в Telegram" onclick="openUserChat('${usernameAttr}', '${claim.telegram_id}')">💬</button>
           <button class="btn" style="font-size:11px; padding:6px 10px;" onclick="resolveRequest(${claim.id}, 'approve')">Одобрить</button>
           <button class="btn secondary" style="font-size:11px; padding:6px 5px;" onclick="resolveRequest(${claim.id}, 'decline')">&times;</button>
         </div>
       </div>
-    `).join('');
+    `}).join('');
   } catch (e) {
     console.error('Ошибка загрузки заявок:', e);
     container.innerHTML = '<div style="text-align:center; font-size:12px; color:#ff5f85; padding:10px;">Ошибка загрузки</div>';
