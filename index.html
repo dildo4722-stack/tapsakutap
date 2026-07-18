@@ -3946,13 +3946,13 @@ if (oldBtn) {
 
  <script>
 // ============================================
-// ===== ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ЛОГИКА =====
+// ===== АДМИН-ПАНЕЛЬ: УПРАВЛЕНИЕ КЕЙСАМИ =====
 // ============================================
 
 (function() {
     'use strict';
     
-    console.log('🔧 Исправление загрузки и сохранения...');
+    console.log('🔧 Инициализация админ-панели...');
 
     // ---- 1. ГЛОБАЛЬНЫЙ СПИСОК ТОВАРОВ ----
     window.ALL_PRIZES = [
@@ -3969,20 +3969,17 @@ if (oldBtn) {
         { key: 'admin', label: 'Админ', reward_type: 'special', amount: 0, special_key: 'admin' }
     ];
 
-    if (typeof window.currentChestPrizes === 'undefined') {
-        window.currentChestPrizes = [];
-    }
+    window.currentChestPrizes = window.currentChestPrizes || [];
 
-    // ---- 2. ЗАГРУЗКА КЕЙСА (ИСПРАВЛЕННАЯ) ----
+    // ---- 2. ЗАГРУЗКА КЕЙСА ----
     window.loadChestPrizes = async function(chestKey) {
-        const container = document.getElementById('adminPrizeList');
+        var container = document.getElementById('adminPrizeList');
         if (!container) return;
         
-        container.innerHTML = '<div style="text-align:center; font-size:12px; color:#cf9f9f; padding:20px;">Загрузка...</div>';
+        container.innerHTML = '<div style="text-align:center;font-size:12px;color:#cf9f9f;padding:20px;">Загрузка...</div>';
         
         try {
-            // Загружаем ВСЕ записи для этого кейса (и активные, и неактивные)
-            const { data, error } = await supabase
+            var { data, error } = await supabase
                 .from('chest_prizes')
                 .select('*')
                 .eq('chest_key', chestKey)
@@ -3990,13 +3987,9 @@ if (oldBtn) {
 
             if (error) throw error;
 
-            console.log(`📦 Данные из БД для кейса "${chestKey}":`, data);
+            var activeData = data ? data.filter(function(row) { return row.active === true; }) : [];
 
-            // Фильтруем только активные записи
-            const activeData = data ? data.filter(row => row.active === true) : [];
-
-            // Дефолтные значения
-            const defaults = {
+            var defaults = {
                 common: [
                     { key: '100_petals', weight: 35 },
                     { key: '500_petals', weight: 30 },
@@ -4027,31 +4020,28 @@ if (oldBtn) {
                 ]
             };
 
-            let prizes;
-
-            // Если есть активные записи в БД — используем их
+            var prizes;
             if (activeData && activeData.length > 0) {
-                console.log('✅ Найдены активные записи в БД:', activeData.length);
-                prizes = activeData.map(row => ({
-                    id: row.id,
-                    label: row.label,
-                    weight: row.weight,
-                    reward_type: row.reward_type,
-                    amount: row.amount,
-                    special_key: row.special_key,
-                    key: row.reward_type === 'special' ? row.special_key : 
-                          (row.amount + '_petals'),
-                    isDefault: false,
-                    fromDB: true
-                }));
-            } else {
-                // Если нет активных записей — используем дефолтные
-                console.log('⚠️ Активных записей нет, используем дефолтные');
-                prizes = (defaults[chestKey] || []).map(p => {
-                    const prize = window.ALL_PRIZES.find(a => a.key === p.key);
+                prizes = activeData.map(function(row) {
                     return {
-                        ...p,
+                        id: row.id,
+                        label: row.label,
+                        weight: row.weight,
+                        reward_type: row.reward_type,
+                        amount: row.amount,
+                        special_key: row.special_key,
+                        key: row.reward_type === 'special' ? row.special_key : (row.amount + '_petals'),
+                        isDefault: false,
+                        fromDB: true
+                    };
+                });
+            } else {
+                prizes = (defaults[chestKey] || []).map(function(p) {
+                    var prize = window.ALL_PRIZES.find(function(a) { return a.key === p.key; });
+                    return {
+                        key: p.key,
                         label: prize ? prize.label : p.key,
+                        weight: p.weight,
                         reward_type: prize ? prize.reward_type : 'petals',
                         amount: prize ? prize.amount : 0,
                         special_key: prize ? prize.special_key : null,
@@ -4067,143 +4057,61 @@ if (oldBtn) {
             
         } catch (e) {
             console.error('Ошибка загрузки:', e);
-            container.innerHTML = '<div style="text-align:center; font-size:12px; color:#ff5f85; padding:20px;">Ошибка загрузки</div>';
+            container.innerHTML = '<div style="text-align:center;font-size:12px;color:#ff5f85;padding:20px;">Ошибка загрузки</div>';
         }
     };
 
-    // ---- 3. СОХРАНЕНИЕ КЕЙСА (С ДОПОЛНИТЕЛЬНЫМ ЛОГИРОВАНИЕМ) ----
-    window.saveChestToDB = async function() {
-        const resultEl = document.getElementById('chestAdminResult');
-        if (!resultEl) return;
-        
-        const chestKey = document.getElementById('adminChestSelect')?.value;
-        if (!chestKey) {
-            resultEl.textContent = '❌ Выберите кейс';
-            resultEl.style.color = '#ff5f85';
-            return;
-        }
-        
-        const prizes = window.currentChestPrizes || [];
-        if (!prizes || prizes.length === 0) {
-            resultEl.textContent = '❌ Добавьте хотя бы один приз';
-            resultEl.style.color = '#ff5f85';
-            return;
-        }
-        
-        const totalWeight = prizes.reduce((sum, p) => sum + (p.weight || 0), 0);
-        if (totalWeight <= 0) {
-            resultEl.textContent = '❌ Сумма шансов должна быть > 0';
-            resultEl.style.color = '#ff5f85';
-            return;
-        }
-        
-        resultEl.textContent = '⏳ Сохранение...';
-        resultEl.style.color = '#ffd27a';
-        
-        try {
-            // 1. Деактивируем все старые записи для этого кейса
-            console.log(`🔄 Деактивация старых записей для кейса "${chestKey}"...`);
-            const { error: deactivateError } = await supabase
-                .from('chest_prizes')
-                .update({ active: false })
-                .eq('chest_key', chestKey);
-            
-            if (deactivateError) throw deactivateError;
-            console.log('✅ Старые записи деактивированы');
-
-            // 2. Вставляем новые записи
-            const inserts = prizes.map(p => ({
-                chest_key: chestKey,
-                label: p.label,
-                weight: p.weight,
-                reward_type: p.reward_type,
-                amount: p.amount || 0,
-                special_key: p.special_key || null,
-                active: true
-            }));
-
-            console.log('📝 Вставляем новые записи:', inserts);
-
-            const { data: inserted, error: insertError } = await supabase
-                .from('chest_prizes')
-                .insert(inserts)
-                .select();
-
-            if (insertError) throw insertError;
-
-            console.log('✅ Успешно вставлено:', inserted);
-
-            resultEl.textContent = `✅ Сохранено! (${prizes.length} призов)`;
-            resultEl.style.color = '#81C784';
-            
-            // Перезагружаем список
-            await window.loadChestPrizes(chestKey);
-            
-            if (typeof showToast === 'function') showToast(`💾 Кейс "${chestKey}" сохранён!`);
-            
-        } catch (e) {
-            console.error('❌ Ошибка сохранения:', e);
-            resultEl.textContent = '❌ Ошибка: ' + (e.message || '');
-            resultEl.style.color = '#ff5f85';
-            if (typeof showToast === 'function') showToast('❌ Ошибка сохранения');
-        }
-    };
-
-    // ---- 4. ОСТАЛЬНЫЕ ФУНКЦИИ ----
+    // ---- 3. ОТОБРАЖЕНИЕ СПИСКА ПРИЗОВ ----
     window.renderPrizeList = function(prizes) {
-        const container = document.getElementById('adminPrizeList');
+        var container = document.getElementById('adminPrizeList');
         if (!container) return;
 
         if (!prizes || prizes.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; font-size:12px; color:#cf9f9f; padding:20px;">
-                    🎁 Кейс пуст. Добавьте призы ниже.
-                </div>
-            `;
+            container.innerHTML = '<div style="text-align:center;font-size:12px;color:#cf9f9f;padding:20px;">🎁 Кейс пуст. Добавьте призы ниже.</div>';
             return;
         }
 
-        const totalWeight = prizes.reduce((sum, p) => sum + (p.weight || 0), 0);
+        var totalWeight = 0;
+        for (var i = 0; i < prizes.length; i++) {
+            totalWeight += (prizes[i].weight || 0);
+        }
 
         function getPrizeIcon(key) {
-            const icons = {
-                'petals': '🌸',
-                'vip': '⭐',
-                'creative': '🎨',
-                'axolotl': '🦎',
-                'admin': '👑'
-            };
+            var icons = { 'petals': '🌸', 'vip': '⭐', 'creative': '🎨', 'axolotl': '🦎', 'admin': '👑' };
             if (key && key.includes('petals')) return icons.petals;
             return icons[key] || '🎁';
         }
 
-        container.innerHTML = prizes.map((prize, index) => {
-            const key = prize.key || prize.special_key || '';
-            const icon = getPrizeIcon(key);
-            const isDefault = prize.isDefault || false;
-            const fromDB = prize.fromDB || false;
-            const percent = totalWeight > 0 ? ((prize.weight / totalWeight) * 100).toFixed(1) : 0;
+        var html = '';
+        for (var index = 0; index < prizes.length; index++) {
+            var prize = prizes[index];
+            var key = prize.key || prize.special_key || '';
+            var icon = getPrizeIcon(key);
+            var isDefault = prize.isDefault || false;
+            var fromDB = prize.fromDB || false;
+            var percent = totalWeight > 0 ? ((prize.weight / totalWeight) * 100).toFixed(1) : 0;
             
-            let badge = '';
+            var badge = '';
             if (fromDB) badge = '💾';
             else if (isDefault) badge = '🔹';
             
-            return `
-            <div class="admin-prize-item" data-index="${index}">
-                <div class="prize-info">
-                    <div class="prize-icon" style="font-size:18px;">${icon}</div>
-                    <span class="prize-name">${prize.label} ${badge}</span>
-                </div>
-                <div class="prize-weight-wrap">
-                    <input type="number" class="prize-weight-input" value="${prize.weight}" min="0.1" step="0.1" 
-                           data-index="${index}" onchange="window.updatePrizeWeight(${index}, this.value)">
-                    <span style="font-size:11px; color:#8a7a7a; min-width:28px;">${percent}%</span>
-                    <button class="prize-remove-btn" onclick="window.removePrize(${index})">✕</button>
-                </div>
-            </div>
-        `}).join('');
+            html += '<div class="admin-prize-item" data-index="' + index + '">' +
+                '<div class="prize-info">' +
+                    '<div class="prize-icon" style="font-size:18px;">' + icon + '</div>' +
+                    '<span class="prize-name">' + prize.label + ' ' + badge + '</span>' +
+                '</div>' +
+                '<div class="prize-weight-wrap">' +
+                    '<input type="number" class="prize-weight-input" value="' + prize.weight + '" min="0.1" step="0.1" data-index="' + index + '" onchange="window.updatePrizeWeight(' + index + ', this.value)">' +
+                    '<span style="font-size:11px;color:#8a7a7a;min-width:28px;">' + percent + '%</span>' +
+                    '<button class="prize-remove-btn" onclick="window.removePrize(' + index + ')">✕</button>' +
+                '</div>' +
+            '</div>';
+        }
+        
+        container.innerHTML = html;
     };
 
+    // ---- 4. ОБНОВЛЕНИЕ ВЕСА ----
     window.updatePrizeWeight = function(index, value) {
         if (window.currentChestPrizes && index >= 0 && index < window.currentChestPrizes.length) {
             window.currentChestPrizes[index].weight = parseFloat(value) || 0.1;
@@ -4211,26 +4119,28 @@ if (oldBtn) {
         }
     };
 
+    // ---- 5. УДАЛЕНИЕ ПРИЗА ----
     window.removePrize = function(index) {
         if (window.currentChestPrizes && index >= 0 && index < window.currentChestPrizes.length) {
-            const removed = window.currentChestPrizes[index];
+            var removed = window.currentChestPrizes[index];
             window.currentChestPrizes.splice(index, 1);
             window.renderPrizeList(window.currentChestPrizes);
-            if (typeof showToast === 'function') showToast(`🗑️ Удалён: ${removed.label}`);
+            if (typeof showToast === 'function') showToast('🗑️ Удалён: ' + removed.label);
         }
     };
 
+    // ---- 6. ДОБАВЛЕНИЕ ПРИЗА ----
     window.addPrizeToChest = function() {
-        const select = document.getElementById('adminPrizeSelect');
-        const weightInput = document.getElementById('adminPrizeWeight');
+        var select = document.getElementById('adminPrizeSelect');
+        var weightInput = document.getElementById('adminPrizeWeight');
         
         if (!select || !weightInput) { 
             if (typeof showToast === 'function') showToast('❌ Элементы не найдены');
             return; 
         }
         
-        const key = select.value;
-        const weight = parseFloat(weightInput.value) || 10;
+        var key = select.value;
+        var weight = parseFloat(weightInput.value) || 10;
         
         if (!key) { 
             if (typeof showToast === 'function') showToast('❌ Выберите товар');
@@ -4245,24 +4155,30 @@ if (oldBtn) {
             return; 
         }
         
-        const prize = window.ALL_PRIZES.find(p => p.key === key);
+        var prize = window.ALL_PRIZES.find(function(p) { return p.key === key; });
         if (!prize) {
             if (typeof showToast === 'function') showToast('❌ Товар не найден');
             return;
         }
         
-        const prizes = window.currentChestPrizes || [];
-        const existingIndex = prizes.findIndex(p => (p.key || p.special_key) === key);
+        var prizes = window.currentChestPrizes || [];
+        var existingIndex = -1;
+        for (var i = 0; i < prizes.length; i++) {
+            if ((prizes[i].key || prizes[i].special_key) === key) {
+                existingIndex = i;
+                break;
+            }
+        }
         
         if (existingIndex !== -1) {
-            const existing = prizes[existingIndex];
-            if (confirm(`Товар "${prize.label}" уже есть в кейсе (вес: ${existing.weight}). Обновить вес на ${weight}?`)) {
+            var existing = prizes[existingIndex];
+            if (confirm('Товар "' + prize.label + '" уже есть в кейсе (вес: ' + existing.weight + '). Обновить вес на ' + weight + '?')) {
                 prizes[existingIndex].weight = weight;
                 prizes[existingIndex].isDefault = false;
                 prizes[existingIndex].fromDB = false;
                 window.currentChestPrizes = prizes;
                 window.renderPrizeList(prizes);
-                if (typeof showToast === 'function') showToast(`✅ Обновлён: ${prize.label} (${weight}%)`);
+                if (typeof showToast === 'function') showToast('✅ Обновлён: ' + prize.label + ' (' + weight + '%)');
                 weightInput.value = 10;
             }
             return;
@@ -4283,16 +4199,92 @@ if (oldBtn) {
         window.currentChestPrizes = prizes;
         window.renderPrizeList(prizes);
         
-        if (typeof showToast === 'function') showToast(`✅ Добавлен: ${prize.label} (${weight}%)`);
+        if (typeof showToast === 'function') showToast('✅ Добавлен: ' + prize.label + ' (' + weight + '%)');
         weightInput.value = 10;
     };
 
-    window.resetChestToDefault = function() {
-        const chestKey = document.getElementById('adminChestSelect')?.value;
-        if (!chestKey) return;
-        if (!confirm(`Сбросить кейс "${chestKey}" к настройкам по умолчанию?`)) return;
+    // ---- 7. СОХРАНЕНИЕ КЕЙСА ----
+    window.saveChestToDB = async function() {
+        var resultEl = document.getElementById('chestAdminResult');
+        if (!resultEl) return;
         
-        const defaults = {
+        var chestKey = document.getElementById('adminChestSelect')?.value;
+        if (!chestKey) {
+            resultEl.textContent = '❌ Выберите кейс';
+            resultEl.style.color = '#ff5f85';
+            return;
+        }
+        
+        var prizes = window.currentChestPrizes || [];
+        if (!prizes || prizes.length === 0) {
+            resultEl.textContent = '❌ Добавьте хотя бы один приз';
+            resultEl.style.color = '#ff5f85';
+            return;
+        }
+        
+        var totalWeight = 0;
+        for (var i = 0; i < prizes.length; i++) {
+            totalWeight += (prizes[i].weight || 0);
+        }
+        if (totalWeight <= 0) {
+            resultEl.textContent = '❌ Сумма шансов должна быть > 0';
+            resultEl.style.color = '#ff5f85';
+            return;
+        }
+        
+        resultEl.textContent = '⏳ Сохранение...';
+        resultEl.style.color = '#ffd27a';
+        
+        try {
+            var { error: deactivateError } = await supabase
+                .from('chest_prizes')
+                .update({ active: false })
+                .eq('chest_key', chestKey);
+            
+            if (deactivateError) throw deactivateError;
+
+            var inserts = [];
+            for (var j = 0; j < prizes.length; j++) {
+                var p = prizes[j];
+                inserts.push({
+                    chest_key: chestKey,
+                    label: p.label,
+                    weight: p.weight,
+                    reward_type: p.reward_type,
+                    amount: p.amount || 0,
+                    special_key: p.special_key || null,
+                    active: true
+                });
+            }
+
+            var { error: insertError } = await supabase
+                .from('chest_prizes')
+                .insert(inserts);
+
+            if (insertError) throw insertError;
+
+            resultEl.textContent = '✅ Сохранено! (' + prizes.length + ' призов)';
+            resultEl.style.color = '#81C784';
+            
+            await window.loadChestPrizes(chestKey);
+            
+            if (typeof showToast === 'function') showToast('💾 Кейс "' + chestKey + '" сохранён!');
+            
+        } catch (e) {
+            console.error('❌ Ошибка сохранения:', e);
+            resultEl.textContent = '❌ Ошибка: ' + (e.message || '');
+            resultEl.style.color = '#ff5f85';
+            if (typeof showToast === 'function') showToast('❌ Ошибка сохранения');
+        }
+    };
+
+    // ---- 8. СБРОС КЕЙСА ----
+    window.resetChestToDefault = function() {
+        var chestKey = document.getElementById('adminChestSelect')?.value;
+        if (!chestKey) return;
+        if (!confirm('Сбросить кейс "' + chestKey + '" к настройкам по умолчанию?')) return;
+        
+        var defaults = {
             common: [
                 { key: '100_petals', weight: 35 },
                 { key: '500_petals', weight: 30 },
@@ -4323,11 +4315,12 @@ if (oldBtn) {
             ]
         };
         
-        const defaultPrizes = (defaults[chestKey] || []).map(p => {
-            const prize = window.ALL_PRIZES.find(a => a.key === p.key);
+        var defaultPrizes = (defaults[chestKey] || []).map(function(p) {
+            var prize = window.ALL_PRIZES.find(function(a) { return a.key === p.key; });
             return {
-                ...p,
+                key: p.key,
                 label: prize ? prize.label : p.key,
+                weight: p.weight,
                 reward_type: prize ? prize.reward_type : 'petals',
                 amount: prize ? prize.amount : 0,
                 special_key: prize ? prize.special_key : null,
@@ -4340,7 +4333,7 @@ if (oldBtn) {
         window.currentChestPrizes = defaultPrizes;
         window.renderPrizeList(defaultPrizes);
         
-        const resultEl = document.getElementById('chestAdminResult');
+        var resultEl = document.getElementById('chestAdminResult');
         if (resultEl) {
             resultEl.textContent = '🔄 Сброшено к дефолту';
             resultEl.style.color = '#ffd27a';
@@ -4348,11 +4341,11 @@ if (oldBtn) {
         if (typeof showToast === 'function') showToast('🔄 Сброшено к дефолтным настройкам');
     };
 
-    // ---- 5. ПЕРЕСОЗДАНИЕ КНОПОК ----
+    // ---- 9. ПЕРЕСОЗДАНИЕ КНОПОК ----
     function recreateButton(id, handler) {
-        const btn = document.getElementById(id);
+        var btn = document.getElementById(id);
         if (btn) {
-            const newBtn = btn.cloneNode(true);
+            var newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
             newBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -4364,8 +4357,8 @@ if (oldBtn) {
         return null;
     }
 
-    recreateButton('loadChestBtn', () => {
-        const select = document.getElementById('adminChestSelect');
+    recreateButton('loadChestBtn', function() {
+        var select = document.getElementById('adminChestSelect');
         if (select) window.loadChestPrizes(select.value);
     });
 
@@ -4373,12 +4366,12 @@ if (oldBtn) {
     recreateButton('saveChestBtn', window.saveChestToDB);
     recreateButton('resetChestBtn', window.resetChestToDefault);
 
-    // ---- 6. АВТОЗАГРУЗКА ПРИ ОТКРЫТИИ ВКЛАДКИ ----
-    const casesTab = document.querySelector('#adminTabs .tab-btn[data-tab="admin-cases"]');
+    // ---- 10. АВТОЗАГРУЗКА ПРИ ОТКРЫТИИ ВКЛАДКИ ----
+    var casesTab = document.querySelector('#adminTabs .tab-btn[data-tab="admin-cases"]');
     if (casesTab) {
         casesTab.addEventListener('click', function() {
-            setTimeout(() => {
-                const select = document.getElementById('adminChestSelect');
+            setTimeout(function() {
+                var select = document.getElementById('adminChestSelect');
                 if (select) {
                     window.loadChestPrizes(select.value);
                 }
@@ -4386,8 +4379,7 @@ if (oldBtn) {
         });
     }
 
-    console.log('✅ Исправленная логика загрузки/сохранения инициализирована!');
-    console.log('📦 Для отладки используйте консоль: window.loadChestPrizes("common")');
+    console.log('✅ Админ-панель инициализирована!');
 
 })();
 </script>
