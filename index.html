@@ -4075,7 +4075,7 @@ window.debugChest = async function() {
                 return;
             }
             
-            const allPrizes = window.ALL_PRIZES || ALL_PRIZES || [];
+            const allPrizes = window.ALL_PRIZES || (typeof ALL_PRIZES !== 'undefined' ? ALL_PRIZES : []) || [];
             const prize = allPrizes.find(p => p.key === key);
             if (!prize) { showToast('❌ Товар не найден'); return; }
             
