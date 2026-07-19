@@ -4052,6 +4052,9 @@ async function submitAdminBalance(id) {
     const amountInput = document.getElementById('adminAmount_' + id);
     const currency = currencySel.value;
     const amount = Math.floor(Number(amountInput.value));
+    // id приходит из onclick="...('${id}')" как строка — приводим к числу,
+    // чтобы сравнение с telegram_id (bigint) было надёжным.
+    const targetId = Number(id);
 
     if (!amount || amount <= 0) { showToast('Укажи количество больше нуля'); return; }
 
@@ -4059,7 +4062,7 @@ async function submitAdminBalance(id) {
         const { data: row, error: fetchErr } = await supabase
             .from('users')
             .select('petals, coins')
-            .eq('telegram_id', id)
+            .eq('telegram_id', targetId)
             .maybeSingle();
 
         if (fetchErr || !row) { showToast('Не удалось найти пользователя'); return; }
@@ -4068,12 +4071,22 @@ async function submitAdminBalance(id) {
         const updated = mode === 'give' ? current + amount : Math.max(0, current - amount);
         const payload = currency === 'coins' ? { coins: updated } : { petals: updated };
 
-        const { error: updateErr } = await supabase
+        // Важно: .update() у Supabase НЕ возвращает ошибку, если по правам
+        // доступа (RLS) или несовпадению id не обновилось ни одной строки —
+        // он просто молча ничего не делает. Добавляем .select(), чтобы
+        // увидеть, что реально обновилось, и не показывать ложный "успех".
+        const { data: updatedRows, error: updateErr } = await supabase
             .from('users')
             .update(payload)
-            .eq('telegram_id', id);
+            .eq('telegram_id', targetId)
+            .select('telegram_id');
 
-        if (updateErr) { showToast('Ошибка обновления баланса'); return; }
+        if (updateErr) { showToast('Ошибка обновления баланса: ' + updateErr.message); return; }
+        if (!updatedRows || updatedRows.length === 0) {
+            showToast('⚠️ Баланс НЕ изменён — 0 строк обновлено (проверь права доступа/RLS на таблице users)');
+            console.error('submitAdminBalance: update matched 0 rows', { targetId, payload });
+            return;
+        }
 
         const label = currency === 'coins' ? 'монет' : 'сакур';
         showToast(mode === 'give'
@@ -4089,12 +4102,17 @@ async function submitAdminBalance(id) {
 
 async function adminToggleBlock(id, newState) {
     try {
-        const { error } = await supabase
+        const { data: updatedRows, error } = await supabase
             .from('users')
             .update({ is_blocked: newState })
-            .eq('telegram_id', id);
+            .eq('telegram_id', Number(id))
+            .select('telegram_id');
 
-        if (error) { showToast('Не удалось изменить статус'); return; }
+        if (error) { showToast('Не удалось изменить статус: ' + error.message); return; }
+        if (!updatedRows || updatedRows.length === 0) {
+            showToast('⚠️ Статус НЕ изменён — 0 строк обновлено (проверь права доступа/RLS)');
+            return;
+        }
 
         showToast(newState ? `Пользователь ${id} заблокирован` : `Пользователь ${id} разблокирован`);
         loadAdminUsersList(document.getElementById('searchUserInAdmin')?.value || '');
