@@ -3150,7 +3150,7 @@ window.activatePromoCode = async function(promoCode) {
             .from('used_promocodes')
             .select('*')
             .eq('promo_id', promo.id)  // ← ИЗМЕНЕНО: promo_id
-            .eq('telegram_id', String(userId))  // ← ИЗМЕНЕНО: telegram_id
+            .eq('telegram_id', userId)  // ← ИЗМЕНЕНО: telegram_id
             .maybeSingle();
 
         if (usageError && usageError.code !== 'PGRST116') {
@@ -3203,7 +3203,7 @@ window.activatePromoCode = async function(promoCode) {
             .from('used_promocodes')
             .insert({
                 promo_id: promo.id,  // ← ИЗМЕНЕНО: promo_id
-                telegram_id: String(userId),  // ← ИЗМЕНЕНО: telegram_id
+                telegram_id: userId,  // ← ИЗМЕНЕНО: telegram_id
                 used_at: new Date().toISOString(),
                 reward_amount: promo.reward_amount || 0,
                 reward_type: promo.reward_type || 'petals'
