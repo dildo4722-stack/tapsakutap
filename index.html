@@ -1759,38 +1759,43 @@ if (typeof window.refCount === 'undefined') {
             return;
         }
         
-        // Проверяем, существует ли реферер
-        const { data: referrer, error: refError } = await supabase
-            .from('users')
-            .select('telegram_id, first_name, username')
-            .eq('telegram_id', parseInt(referrerId))
-            .maybeSingle();
-            
-        if (refError || !referrer) {
-            console.log('❌ Реферер не найден');
-            return;
-        }
-        
-        // Сохраняем реферала у пользователя
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ 
-                referrer_id: parseInt(referrerId)
-            })
-            .eq('telegram_id', userId);
-            
-        if (updateError) {
-            console.error('Ошибка сохранения реферала:', updateError);
-            return;
-        }
-        
-        // Увеличиваем счетчик рефералов у реферера
-        await supabase
-            .from('users')
-            .update({ 
-                ref_count: supabase.raw('ref_count + 1')
-            })
-            .eq('telegram_id', parseInt(referrerId));
+       // Проверяем, существует ли реферер
+const { data: referrer, error: refError } = await supabase
+    .from('users')
+    .select('telegram_id, first_name, username, ref_count')
+    .eq('telegram_id', parseInt(referrerId))
+    .maybeSingle();
+    
+if (refError || !referrer) {
+    console.log('❌ Реферер не найден');
+    return;
+}
+
+// Сохраняем реферала у пользователя
+const { error: updateError } = await supabase
+    .from('users')
+    .update({ 
+        referrer_id: parseInt(referrerId)
+    })
+    .eq('telegram_id', userId);
+    
+if (updateError) {
+    console.error('Ошибка сохранения реферала:', updateError);
+    return;
+}
+
+// Увеличиваем счетчик рефералов у реферера (обычным UPDATE, без .raw())
+const { error: countError } = await supabase
+    .from('users')
+    .update({ 
+        ref_count: (referrer.ref_count || 0) + 1
+    })
+    .eq('telegram_id', parseInt(referrerId));
+
+if (countError) {
+    console.error('Ошибка обновления счётчика рефералов:', countError);
+    return;
+}
         
         // Обновляем локальный счетчик
         window.refCount = (window.refCount || 0) + 1;
@@ -3391,6 +3396,7 @@ window.activatePromoCode = async function(promoCode) {
         showBlockedScreen();
         return;
       }
+      await syncUserProfile();   // гарантируем, что запись пользователя уже создана в Supabase
       await handleReferralFromApp();
       // ===== ВОССТАНОВЛЕНИЕ ЭНЕРГИИ =====
 function restoreEnergy() {
