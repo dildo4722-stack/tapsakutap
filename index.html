@@ -3147,7 +3147,7 @@ window.activatePromoCode = async function(promoCode) {
         // 3. ПРОВЕРКА: использовал ли пользователь этот промокод
         // ИСПРАВЛЕНО: promo_id вместо promocode_id
         const { data: existingUsage, error: usageError } = await window.supabaseClient
-            .from('used_promocode')
+            .from('used_promocodes')
             .select('*')
             .eq('promo_id', promo.id)  // ← ИЗМЕНЕНО: promo_id
             .eq('telegram_id', String(userId))  // ← ИЗМЕНЕНО: telegram_id
@@ -3200,7 +3200,7 @@ window.activatePromoCode = async function(promoCode) {
         // 5. ЗАПИСЫВАЕМ ИСПОЛЬЗОВАНИЕ ПРОМОКОДА
         // ИСПРАВЛЕНО: правильные названия колонок
         const { error: insertError } = await window.supabaseClient
-            .from('used_promocode')
+            .from('used_promocodes')
             .insert({
                 promo_id: promo.id,  // ← ИЗМЕНЕНО: promo_id
                 telegram_id: String(userId),  // ← ИЗМЕНЕНО: telegram_id
