@@ -1710,26 +1710,32 @@ if (typeof window.refCount === 'undefined') {
             return;
         }
         
+        // Источник 1: startapp=ref_ID (прямая ссылка на мини-апп)
         const startParam = tg.initDataUnsafe?.start_param;
-        if (!startParam) {
-            console.log('ℹ️ Нет start_param');
-            return;
-        }
         
-        console.log('📥 start_param получен:', startParam);
+        // Источник 2: ?ref=ID в URL (кнопка "Открыть игру" из бота)
+        const urlParams = new URLSearchParams(window.location.search);
+        const refFromUrl = urlParams.get('ref');
         
-        // Поддерживаем оба формата: ref_123 и просто ref123
         let referrerId = null;
-        if (startParam.startsWith('ref_')) {
-            referrerId = startParam.replace('ref_', '');
-        } else if (startParam.startsWith('ref')) {
-            referrerId = startParam.replace('ref', '');
+        
+        if (startParam) {
+            console.log('📥 start_param получен:', startParam);
+            if (startParam.startsWith('ref_')) {
+                referrerId = startParam.replace('ref_', '');
+            } else if (startParam.startsWith('ref')) {
+                referrerId = startParam.replace('ref', '');
+            }
+        } else if (refFromUrl) {
+            console.log('📥 ref получен из URL:', refFromUrl);
+            referrerId = refFromUrl;
         }
         
         if (!referrerId) {
-            console.log('ℹ️ Не реферальный параметр');
+            console.log('ℹ️ Нет реферального параметра (ни start_param, ни ?ref=)');
             return;
         }
+        
         
         const userId = tg.initDataUnsafe?.user?.id;
         if (!userId) {
