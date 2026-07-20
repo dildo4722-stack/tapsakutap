@@ -1746,10 +1746,10 @@ input[type=number] {
     // а не баг приложения) — если его нет, весь код ниже просто оставляет
     // круглую заглушку с первой буквой имени, что и является ожидаемым поведением.
     let currentPhotoUrl = '';
-    let petals = 0;
-    let coins = 0;
-    let stars = 0; // валюта наград лутбокса (звёзды); стоимость открытия лутбокса подключим позже
-    let energy = 1000;
+    window.petals = 0;
+    window.coins = 0;
+    window.stars = 0;
+    window.energy = 1000;
     const MAX_ENERGY = 1000;
     let tapMultiplier = 1; 
     let tapMultiplierExpiresAt = 0;
