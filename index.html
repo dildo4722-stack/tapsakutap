@@ -3107,7 +3107,7 @@ async function renderLeaderboard(kind) {
         </div>
       `;
     }
-  // ===== ФУНКЦИЯ АКТИВАЦИИ ПРОМОКОДА (С ТАБЛИЦЕЙ used_promocode) =====
+ // ===== ФУНКЦИЯ АКТИВАЦИИ ПРОМОКОДА (С ТАБЛИЦЕЙ used_promocode) =====
 window.activatePromoCode = async function(promoCode) {
     if (!promoCode || promoCode.trim() === '') {
         showToast('❌ Введи промокод');
@@ -3145,12 +3145,12 @@ window.activatePromoCode = async function(promoCode) {
         }
 
         // 3. ПРОВЕРКА: использовал ли пользователь этот промокод
-        // ИСПРАВЛЕНО: таблица used_promocode
+        // ИСПРАВЛЕНО: promo_id вместо promocode_id
         const { data: existingUsage, error: usageError } = await window.supabaseClient
-            .from('used_promocode')  // ← ИЗМЕНЕНО НА used_promocode
+            .from('used_promocode')
             .select('*')
-            .eq('promocode_id', promo.id)
-            .eq('user_id', String(userId))
+            .eq('promo_id', promo.id)  // ← ИЗМЕНЕНО: promo_id
+            .eq('telegram_id', String(userId))  // ← ИЗМЕНЕНО: telegram_id
             .maybeSingle();
 
         if (usageError && usageError.code !== 'PGRST116') {
@@ -3198,13 +3198,15 @@ window.activatePromoCode = async function(promoCode) {
         }
 
         // 5. ЗАПИСЫВАЕМ ИСПОЛЬЗОВАНИЕ ПРОМОКОДА
-        // ИСПРАВЛЕНО: таблица used_promocode
+        // ИСПРАВЛЕНО: правильные названия колонок
         const { error: insertError } = await window.supabaseClient
-            .from('used_promocode')  // ← ИЗМЕНЕНО НА used_promocode
+            .from('used_promocode')
             .insert({
-                promocode_id: promo.id,
-                user_id: String(userId),
-                used_at: new Date().toISOString()
+                promo_id: promo.id,  // ← ИЗМЕНЕНО: promo_id
+                telegram_id: String(userId),  // ← ИЗМЕНЕНО: telegram_id
+                used_at: new Date().toISOString(),
+                reward_amount: promo.reward_amount || 0,
+                reward_type: promo.reward_type || 'petals'
             });
 
         if (insertError) {
