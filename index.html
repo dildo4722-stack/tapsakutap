@@ -2639,12 +2639,7 @@ document.querySelector('[data-tab="admin-cases"]')?.addEventListener('click', fu
     });
 
     // ===== Промокод =====
-    document.getElementById('promoBtn').addEventListener('click', () => {
-      const code = document.getElementById('promoInput').value.trim();
-      if (!code) { showToast('Введи промокод'); return; }
-      showToast('Код отправлен на проверку');
-      document.getElementById('promoInput').value = '';
-    });
+  
 
     // ===== Рефералка =====
     document.getElementById('copyRefBtn').addEventListener('click', () => {
@@ -3112,7 +3107,8 @@ async function renderLeaderboard(kind) {
         </div>
       `;
     }
-    async function activatePromoCode(promoCode) {
+    // ===== ФУНКЦИЯ АКТИВАЦИИ ПРОМОКОДА (ГЛОБАЛЬНАЯ) =====
+window.activatePromoCode = async function(promoCode) {
     if (!promoCode || promoCode.trim() === '') {
         showToast('❌ Введи промокод');
         return;
@@ -3135,23 +3131,29 @@ async function renderLeaderboard(kind) {
         }
 
         // Проверки валидности
-        if (!promo.active) { showToast('❌ Промокод неактивен'); return; }
-        if (promo.expires_at && new Date(promo.expires_at) < new Date()) { showToast('❌ Срок действия истек'); return; }
-        if (promo.used_count >= promo.uses_limit) { showToast('❌ Промокод уже использован'); return; }
+        if (!promo.active) { 
+            showToast('❌ Промокод неактивен'); 
+            return; 
+        }
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) { 
+            showToast('❌ Срок действия истек'); 
+            return; 
+        }
+        if (promo.used_count >= promo.uses_limit) { 
+            showToast('❌ Промокод уже использован'); 
+            return; 
+        }
 
-        // --- ПРИМЕНЯЕМ НАГРАДУ, РАБОТАЯ С ПЕРЕМЕННЫМИ ---
+        // --- ПРИМЕНЯЕМ НАГРАДУ ---
         if (promo.reward_type === 'petals') {
-            // ИЗМЕНЕНО: Работаем с переменной petals, а НЕ с DOM
-            petals += promo.reward_amount;
+            window.petals += promo.reward_amount;
             showToast(`🎉 +${promo.reward_amount} 🌸 лепестков!`);
         } else if (promo.reward_type === 'coins') {
-            // ИЗМЕНЕНО: Работаем с переменной coins
-            coins += promo.reward_amount;
+            window.coins += promo.reward_amount;
             showToast(`🎉 +${promo.reward_amount} 🪙 монет!`);
         } else if (promo.reward_type === 'multiplier') {
             const mult = promo.multiplier_value || 2;
             const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-            // Обновляем глобальные переменные и localStorage
             window.tapMultiplier = mult;
             window.tapMultiplierExpiresAt = expiresAt;
             localStorage.setItem('saku_tapMultiplier', mult);
@@ -3159,7 +3161,7 @@ async function renderLeaderboard(kind) {
             showToast(`🎉 x${mult} множитель на 24 часа!`);
         }
 
-        // ОБНОВЛЯЕМ UI ОДИН РАЗ
+        // Обновляем UI
         updateUI();
         updateAchievements();
 
@@ -3170,22 +3172,21 @@ async function renderLeaderboard(kind) {
             .eq('id', promo.id);
 
         // Увеличиваем счетчик промокодов для достижений
-        if (typeof promosUsed !== 'undefined') {
-            promosUsed += 1;
-        } else {
-            // Если переменная не объявлена глобально, создаем её
-            window.promosUsed = (window.promosUsed || 0) + 1;
-        }
+        window.promosUsed = (window.promosUsed || 0) + 1;
         
         // Очищаем поле ввода
         const promoInput = document.getElementById('promoInput');
         if (promoInput) promoInput.value = '';
 
+        // Сохраняем данные
+        isDirty = true;
+        saveData();
+
     } catch (e) {
         console.error('❌ Ошибка активации:', e);
         showToast('❌ Ошибка при активации промокода');
     }
-}
+};
 
     // ===== ПРОВЕРКА БЛОКИРОВКИ И СТАРТ =====
     async function checkBlockedAndInit() {
