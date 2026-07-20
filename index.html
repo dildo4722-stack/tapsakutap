@@ -1697,7 +1697,119 @@ input[type=number] {
     const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 12345;
     const currentUserId = tgId;
 
-
+  // ===== ОБРАБОТКА РЕФЕРАЛОВ В МИНИ-ПРИЛОЖЕНИИ =====
+async function handleReferralFromApp() {
+  // Убеждаемся, что window.refCount существует
+if (typeof window.refCount === 'undefined') {
+    window.refCount = 0;
+}
+    try {
+        const tg = window.Telegram?.WebApp;
+        if (!tg) {
+            console.log('ℹ️ Не в Telegram WebApp');
+            return;
+        }
+        
+        const startParam = tg.initDataUnsafe?.start_param;
+        if (!startParam) {
+            console.log('ℹ️ Нет start_param');
+            return;
+        }
+        
+        console.log('📥 start_param получен:', startParam);
+        
+        // Поддерживаем оба формата: ref_123 и просто ref123
+        let referrerId = null;
+        if (startParam.startsWith('ref_')) {
+            referrerId = startParam.replace('ref_', '');
+        } else if (startParam.startsWith('ref')) {
+            referrerId = startParam.replace('ref', '');
+        }
+        
+        if (!referrerId) {
+            console.log('ℹ️ Не реферальный параметр');
+            return;
+        }
+        
+        const userId = tg.initDataUnsafe?.user?.id;
+        if (!userId) {
+            console.log('❌ Нет ID пользователя');
+            return;
+        }
+        
+        if (String(referrerId) === String(userId)) {
+            console.log('⚠️ Нельзя пригласить самого себя');
+            return;
+        }
+        
+        // Проверяем, есть ли уже реферал у пользователя
+        const { data: existing, error: checkError } = await supabase
+            .from('users')
+            .select('referrer_id, ref_count')
+            .eq('telegram_id', userId)
+            .maybeSingle();
+            
+        if (checkError) {
+            console.error('Ошибка проверки:', checkError);
+            return;
+        }
+        
+        if (existing?.referrer_id) {
+            console.log('ℹ️ У пользователя уже есть реферал');
+            return;
+        }
+        
+        // Проверяем, существует ли реферер
+        const { data: referrer, error: refError } = await supabase
+            .from('users')
+            .select('telegram_id, first_name, username')
+            .eq('telegram_id', parseInt(referrerId))
+            .maybeSingle();
+            
+        if (refError || !referrer) {
+            console.log('❌ Реферер не найден');
+            return;
+        }
+        
+        // Сохраняем реферала у пользователя
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ 
+                referrer_id: parseInt(referrerId)
+            })
+            .eq('telegram_id', userId);
+            
+        if (updateError) {
+            console.error('Ошибка сохранения реферала:', updateError);
+            return;
+        }
+        
+        // Увеличиваем счетчик рефералов у реферера
+        await supabase
+            .from('users')
+            .update({ 
+                ref_count: supabase.raw('ref_count + 1')
+            })
+            .eq('telegram_id', parseInt(referrerId));
+        
+        // Обновляем локальный счетчик
+        window.refCount = (window.refCount || 0) + 1;
+        
+        console.log(`✅ Реферал засчитан! ${userId} → ${referrerId}`);
+        showToast('🎉 Вы присоединились по реферальной ссылке!');
+        
+        // Обновляем UI
+        updateUI();
+        updateAchievements();
+        
+        // Сохраняем изменения
+        isDirty = true;
+        saveData();
+        
+    } catch (e) {
+        console.error('❌ Ошибка обработки реферала:', e);
+    }
+}
 
     // Функция показа уведомлений
     function showToast(message) {
@@ -1887,7 +1999,7 @@ setInterval(checkMultiplierExpiry, 60000);
       const ea = document.getElementById('exAvailPetals');
       if (ea) ea.textContent = formatNumber(petals);
 
-      if (refCountEl) refCountEl.textContent = refCount;
+      if (refCountEl) refCountEl.textContent = window.refCount || 0;
       if (loginStreakEl) loginStreakEl.textContent = loginStreak;
     }
 
@@ -2015,6 +2127,7 @@ async function loadData() {
             tapTaskClaimed = !!user.tap_task_claimed;
             loginStreak = user.login_streak ?? 1;
             refCount = user.ref_count ?? 0;
+            window.refCount = refCount;
             totalExchangesCount = user.total_exchanges ?? 0;
             tapMultiplier = user.tap_multiplier ?? 1;
             tapMultiplierExpiresAt = user.tap_multiplier_expires_at ?? 0;
@@ -2131,9 +2244,10 @@ const BOT_USERNAME = 'Sakura_Store67_bot';
 // Функция для обновления реферальной ссылки
 function updateRefLink() {
   const userId = currentUserId || '12345';
-  const refLink = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
+  // Для мини-приложения используем /app?startapp=
+  const refLink = `https://t.me/${BOT_USERNAME}/app?startapp=ref_${userId}`;
   const el = document.getElementById('refLinkText');
-  if (el) el.textContent = refLink; // ✅ textContent для div
+  if (el) el.textContent = refLink;
 }
 
 // Функция для обновления статистики рефералов
@@ -3277,6 +3391,7 @@ window.activatePromoCode = async function(promoCode) {
         showBlockedScreen();
         return;
       }
+      await handleReferralFromApp();
       // ===== ВОССТАНОВЛЕНИЕ ЭНЕРГИИ =====
 function restoreEnergy() {
     if (energy < MAX_ENERGY) {
